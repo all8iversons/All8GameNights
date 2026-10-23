@@ -1,5 +1,8 @@
 import { HttpError, jsonResponse, readJson } from '../_shared/http.ts';
+import { serviceClient } from '../_shared/game-night-auth.ts';
 import { requireHost } from './shared.ts';
+
+type DatabaseClient = ReturnType<typeof serviceClient>;
 
 interface ChallengeInput {
   name?: unknown;
@@ -7,7 +10,7 @@ interface ChallengeInput {
   enabled?: unknown;
 }
 
-function parseChallenge(body: ChallengeInput) {
+export function parseChallenge(body: ChallengeInput) {
   if (typeof body.name !== 'string' || typeof body.instructions !== 'string') {
     throw new HttpError(400, 'VALIDATION_ERROR', 'Challenge name and instructions are required.');
   }
@@ -29,7 +32,7 @@ function parseChallenge(body: ChallengeInput) {
   return { name, instructions, enabled: body.enabled ?? true };
 }
 
-function mapChallenge(row: Record<string, unknown>) {
+export function mapChallenge(row: Record<string, unknown>) {
   return {
     id: row.id,
     name: row.name,
@@ -40,6 +43,12 @@ function mapChallenge(row: Record<string, unknown>) {
 
 export async function readChallengeCatalog(request: Request, spectatorCode: string) {
   const { client } = await requireHost(request, spectatorCode);
+  return readChallengeCatalogWithClient(client);
+}
+
+export async function readChallengeCatalogWithClient(
+  client: DatabaseClient,
+) {
   const { data, error } = await client
     .from('challenges')
     .select('id, name, instructions, enabled')
@@ -50,6 +59,13 @@ export async function readChallengeCatalog(request: Request, spectatorCode: stri
 
 export async function createChallenge(request: Request, spectatorCode: string) {
   const { client } = await requireHost(request, spectatorCode);
+  return createChallengeWithClient(request, client);
+}
+
+export async function createChallengeWithClient(
+  request: Request,
+  client: DatabaseClient,
+) {
   const body = await readJson<ChallengeInput>(request);
   const { data, error } = await client
     .from('challenges')
@@ -69,6 +85,14 @@ export async function updateChallenge(
   challengeId: string,
 ) {
   const { client } = await requireHost(request, spectatorCode);
+  return updateChallengeWithClient(request, client, challengeId);
+}
+
+export async function updateChallengeWithClient(
+  request: Request,
+  client: DatabaseClient,
+  challengeId: string,
+) {
   const body = await readJson<ChallengeInput>(request);
   const { data, error } = await client
     .from('challenges')

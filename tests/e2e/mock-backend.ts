@@ -65,7 +65,13 @@ export async function installMockBackend(page: Page) {
   }
   const spectatorCode = '482731';
   const hostCapability = 'a'.repeat(64);
+  const adminPassword = 'c'.repeat(64);
   const completedTrades = new Map<string, string>();
+  const teamNames = [
+    { id: 'pool-1', name: 'Aurora Voyagers', createdAt: new Date().toISOString() },
+    { id: 'pool-2', name: 'Nebula Navigators', createdAt: new Date().toISOString() },
+    { id: 'pool-3', name: 'Comet Pioneers', createdAt: new Date().toISOString() },
+  ];
 
   await page.context().route('http://127.0.0.1:54321/functions/v1/**', async (route: Route) => {
     const request = route.request();
@@ -89,6 +95,67 @@ export async function installMockBackend(page: Page) {
             ]
           : [];
       return send({ entries });
+    }
+
+    if (segments[0] === 'game-nights' && segments[1] === 'admin') {
+      if (request.headers().authorization !== `Bearer ${adminPassword}`) {
+        return send(
+          { error: { code: 'UNAUTHORIZED', message: 'The admin password is invalid.' } },
+          401,
+        );
+      }
+      const [, , resource, id, action] = segments;
+      if (resource === 'challenges' && method === 'GET') return send({ challenges });
+      if (resource === 'challenges' && !id && method === 'POST') {
+        const { name, instructions } = request.postDataJSON() as {
+          name: string;
+          instructions: string;
+        };
+        const challenge = {
+          id: `challenge-${challenges.length + 1}`,
+          name,
+          instructions,
+          enabled: true,
+        };
+        challenges.push(challenge);
+        return send({ challenge }, 201);
+      }
+      if (resource === 'challenges' && id && method === 'POST') {
+        const challenge = challenges.find(({ id: itemId }) => itemId === id);
+        if (!challenge)
+          return send({ error: { code: 'NOT_FOUND', message: 'Challenge not found' } }, 404);
+        if (action === 'archive') {
+          challenge.enabled = false;
+        } else {
+          const { name, instructions, enabled } = request.postDataJSON() as {
+            name: string;
+            instructions: string;
+            enabled: boolean;
+          };
+          Object.assign(challenge, { name, instructions, enabled });
+        }
+        return send({ challenge });
+      }
+      if (resource === 'team-names' && method === 'GET') return send({ teamNames });
+      if (resource === 'team-names' && !id && method === 'POST') {
+        const { name } = request.postDataJSON() as { name: string };
+        const teamName = { id: `pool-${teamNames.length + 1}`, name, createdAt: new Date().toISOString() };
+        teamNames.push(teamName);
+        return send({ teamName }, 201);
+      }
+      if (resource === 'team-names' && id && method === 'POST') {
+        const teamName = teamNames.find(({ id: itemId }) => itemId === id);
+        if (!teamName)
+          return send({ error: { code: 'NOT_FOUND', message: 'Team name not found' } }, 404);
+        if (action === 'remove') {
+          teamNames.splice(teamNames.indexOf(teamName), 1);
+          return send({ removed: true });
+        }
+        const { name } = request.postDataJSON() as { name: string };
+        teamName.name = name;
+        return send({ teamName });
+      }
+      return send({ error: { code: 'NOT_FOUND', message: 'Not found' } }, 404);
     }
 
     if (segments[0] === 'game-nights' && segments.length === 1 && method === 'POST') {
@@ -260,14 +327,7 @@ export async function installMockBackend(page: Page) {
       };
       const teamCount =
         mode === 'team_count' ? count : Math.ceil(gameNight.participants.length / count);
-      const generatedNames = [
-        'Aurora Voyagers',
-        'Nebula Navigators',
-        'Comet Pioneers',
-        'Lunar Guardians',
-        'Nova Rangers',
-        'Orbit Explorers',
-      ];
+      const generatedNames = teamNames.map(({ name }) => name);
       gameNight.participants.forEach((participant) => {
         participant.teamId = null;
       });

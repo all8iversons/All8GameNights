@@ -1,5 +1,8 @@
 import { HttpError, jsonResponse, readJson } from '../_shared/http.ts';
+import { serviceClient } from '../_shared/game-night-auth.ts';
 import { mapTeam, requireHost } from './shared.ts';
+
+type DatabaseClient = ReturnType<typeof serviceClient>;
 
 async function requireEditableHost(request: Request, spectatorCode: string) {
   const { client, night, authorized } = await requireHost(request, spectatorCode);
@@ -47,36 +50,16 @@ export async function randomizeTeams(request: Request, spectatorCode: string) {
   return jsonResponse({ updatedCount });
 }
 
-const spaceTeamAdjectives = [
-  'Aurora',
-  'Nebula',
-  'Comet',
-  'Lunar',
-  'Nova',
-  'Orbit',
-  'Cosmic',
-  'Solar',
-  'Stellar',
-  'Meteor',
-];
-
-const spaceTeamNouns = [
-  'Voyagers',
-  'Pioneers',
-  'Navigators',
-  'Guardians',
-  'Rangers',
-  'Explorers',
-  'Pathfinders',
-  'Trailblazers',
-  'Seekers',
-  'Astronauts',
-];
-
-function generateSpaceTeamNames(count: number) {
-  const names: string[] = [];
-  for (const adjective of spaceTeamAdjectives) {
-    for (const noun of spaceTeamNouns) names.push(`${adjective} ${noun}`);
+async function generateSpaceTeamNames(client: DatabaseClient, count: number) {
+  const { data, error } = await client.from('team_name_pool').select('name');
+  if (error) throw error;
+  const names = (data ?? []).map(({ name }) => name);
+  if (names.length === 0) {
+    throw new HttpError(
+      409,
+      'TEAM_NAME_POOL_EMPTY',
+      'Add at least one random team name before generating teams.',
+    );
   }
   for (let index = names.length - 1; index > 0; index -= 1) {
     const random = new Uint32Array(1);
@@ -87,7 +70,9 @@ function generateSpaceTeamNames(count: number) {
   return Array.from({ length: count }, (_, index) => {
     const name = names[index % names.length];
     const suffix = Math.floor(index / names.length);
-    return suffix === 0 ? name : `${name} ${suffix + 1}`;
+    if (suffix === 0) return name;
+    const suffixText = ` ${suffix + 1}`;
+    return `${name.slice(0, 40 - suffixText.length)}${suffixText}`;
   });
 }
 
@@ -127,7 +112,7 @@ export async function generateTeams(request: Request, spectatorCode: string) {
     body.mode === 'team_count'
       ? Number(body.count)
       : Math.ceil(participantCount / Number(body.count));
-  const teamNames = generateSpaceTeamNames(teamCount);
+  const teamNames = await generateSpaceTeamNames(client, teamCount);
   const { data: updatedCount, error } = await client.rpc('generate_game_night_teams', {
     p_game_night_id: night.id,
     p_team_names: teamNames,

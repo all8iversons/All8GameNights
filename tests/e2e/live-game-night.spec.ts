@@ -143,6 +143,42 @@ test('host can reconnect with the private recovery key', async ({ page }) => {
   await expect(page.getByRole('heading', { name: /add your players/i })).toBeVisible();
 });
 
+test('admin manages shared challenges and random team names without creating a game night', async ({
+  page,
+}) => {
+  await installMockBackend(page);
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Manage content' }).click();
+  await expect(page.getByRole('heading', { name: 'Manage game content.' })).toBeVisible();
+  await page.getByLabel('Admin password').fill('c'.repeat(64));
+  await page.getByRole('button', { name: 'Unlock content management' }).click();
+
+  await expect(page.getByRole('heading', { name: 'Challenge catalog' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Random team-name pool' })).toBeVisible();
+  await page.getByLabel('Challenge name', { exact: true }).fill('Admin-created challenge');
+  await page
+    .getByLabel('Instructions', { exact: true })
+    .fill('A shared challenge created without a game night.');
+  await page.getByRole('button', { name: 'Add challenge' }).click();
+  const challengeRow = page.locator('.global-content-item').first();
+  await expect(challengeRow.locator('input').first()).toHaveValue('Admin-created challenge');
+  await challengeRow.getByRole('button', { name: 'Archive' }).click();
+  await expect(challengeRow.getByLabel('Available for future draws')).not.toBeChecked();
+
+  await page.getByLabel('New random team name').fill('Admin Team Name');
+  await page.getByRole('button', { name: 'Add name' }).click();
+  const teamNameRow = page.locator('.global-team-name-item').first();
+  const newTeamName = teamNameRow.getByLabel('Edit random team name');
+  await expect(newTeamName).toHaveValue('Admin Team Name');
+  await newTeamName.fill('Renamed Admin Team');
+  await teamNameRow.getByRole('button', { name: 'Save' }).click();
+  await expect(newTeamName).toHaveValue('Renamed Admin Team');
+  await page.once('dialog', (dialog) => void dialog.accept());
+  await teamNameRow.getByRole('button', { name: 'Remove' }).click();
+  await expect(page.getByLabel('Edit random team name')).toHaveCount(3);
+  await expect(page.getByRole('button', { name: /create game night/i })).toBeVisible();
+});
+
 test('spectator code alone cannot restore host privileges', async ({ page }) => {
   await installMockBackend(page);
   await page.goto('/');

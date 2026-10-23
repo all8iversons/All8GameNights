@@ -43,8 +43,16 @@ if [ ! -f "$script_dir/.env" ]; then
   rm -f "$upstream_dir/docker/.env.old"
 fi
 
+if ! grep -q '^GAME_NIGHT_ADMIN_PASSWORD=' "$script_dir/.env"; then
+  printf '\nGAME_NIGHT_ADMIN_PASSWORD=%s\n' "$(openssl rand -hex 32)" >> "$script_dir/.env"
+elif ! grep -Eq '^GAME_NIGHT_ADMIN_PASSWORD=[^[:space:]]{32,}$' "$script_dir/.env"; then
+  printf '%s\n' 'GAME_NIGHT_ADMIN_PASSWORD must contain at least 32 non-space characters. Set it in deploy/unraid/.env and rerun preparation.' >&2
+  exit 1
+fi
+
 cp "$script_dir/.env" "$upstream_dir/docker/.env"
 chmod 600 "$script_dir/.env"
 chmod 600 "$upstream_dir/docker/.env"
 printf 'Prepared pinned Supabase stack at %s\n' "$upstream_dir/docker"
 printf 'Review %s/.env and set SUPABASE_PUBLIC_URL to this server'\''s LAN address before starting Compose.\n' "$script_dir"
+printf 'A strong global content admin password was added to %s/.env. Keep it private.\n' "$script_dir"

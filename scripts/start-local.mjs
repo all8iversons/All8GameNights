@@ -1,4 +1,5 @@
 import { spawn, spawnSync } from 'node:child_process';
+import { randomBytes } from 'node:crypto';
 import { readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -51,6 +52,28 @@ function parseEnvironment(output) {
   );
 }
 
+async function ensureLocalAdminPassword() {
+  let existing = '';
+  try {
+    existing = await readFile(envFile, 'utf8');
+  } catch (error) {
+    if (error.code !== 'ENOENT') throw error;
+  }
+  const existingPassword = existing
+    .match(/^\s*GAME_NIGHT_ADMIN_PASSWORD\s*=\s*(.*?)\s*$/m)?.[1]
+    ?.replace(/^(['"])(.*)\1$/, '$2');
+  if (existingPassword && existingPassword.length >= 32) return existingPassword;
+  const password = randomBytes(32).toString('hex');
+  const preservedLines = existing
+    .split(/\r?\n/)
+    .filter((line) => !/^\s*GAME_NIGHT_ADMIN_PASSWORD\s*=/.test(line));
+  while (preservedLines.at(-1) === '') preservedLines.pop();
+  preservedLines.push(`GAME_NIGHT_ADMIN_PASSWORD=${password}`);
+  await writeFile(envFile, `${preservedLines.join('\n')}\n`, 'utf8');
+  console.log('Generated local global-content admin password in .env.local.');
+  return password;
+}
+
 async function writeLocalEnvironment() {
   const values = parseEnvironment(runSupabase(['status', '--output', 'env'], { capture: true }));
   const url = values.API_URL ?? values.SUPABASE_URL;
@@ -99,6 +122,8 @@ function stopServices() {
 
 async function main() {
   verifySupabaseCli();
+  const adminPassword = await ensureLocalAdminPassword();
+  process.env.GAME_NIGHT_ADMIN_PASSWORD = adminPassword;
   runSupabase(['start']);
   runSupabase(['migration', 'up', '--local']);
 
@@ -108,6 +133,8 @@ async function main() {
   const functions = startService('Supabase Edge Functions', supabaseCommand, [
     'functions',
     'serve',
+    '--env-file',
+    envFile,
   ]);
   const vite = startService('Vite', process.execPath, [
     'node_modules/vite/bin/vite.js',

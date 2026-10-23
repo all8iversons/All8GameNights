@@ -18,6 +18,7 @@ export async function apiRequest<T>(
     method?: string;
     body?: unknown;
     hostCapability?: string;
+    adminPassword?: string;
   } = {},
 ): Promise<T> {
   const { url, publishableKey } = getSupabaseConfig();
@@ -25,6 +26,10 @@ export async function apiRequest<T>(
     apikey: publishableKey,
     'Content-Type': 'application/json',
   });
+
+  if (options.adminPassword) {
+    headers.set('Authorization', `Bearer ${options.adminPassword}`);
+  }
 
   if (options.hostCapability) {
     headers.set('Authorization', `Bearer ${options.hostCapability}`);

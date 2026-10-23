@@ -8,6 +8,21 @@ All state-changing calls use JSON and must be handled by the server. Host operat
 
 `GET /functions/v1/game-nights/{spectatorCode}` joins a viewer to the board. Failed lookups are limited to 10 attempts per source IP per 15-minute window. Successful lookups do not consume the failed-attempt allowance.
 
+## Global content administration
+
+Global content operations do not require a game night. They require `Authorization: Bearer <GAME_NIGHT_ADMIN_PASSWORD>`, where the server-side secret must contain at least 32 characters. A missing or weak server configuration returns `503 ADMIN_NOT_CONFIGURED`; an absent or incorrect password returns `401 UNAUTHORIZED`. The browser must keep the password in memory only and must never include it in public runtime configuration or local storage.
+
+- `GET /functions/v1/game-nights/admin/challenges` lists the shared catalog.
+- `POST /functions/v1/game-nights/admin/challenges` adds `{ "name": "...", "instructions": "..." }`, returning `201`.
+- `POST /functions/v1/game-nights/admin/challenges/{challengeId}` edits `{ "name": "...", "instructions": "...", "enabled": true }`.
+- `POST /functions/v1/game-nights/admin/challenges/{challengeId}/archive` sets `enabled` to false without deleting records referenced by current or historical rounds.
+- `GET /functions/v1/game-nights/admin/team-names` lists the random team-name pool.
+- `POST /functions/v1/game-nights/admin/team-names` adds `{ "name": "..." }`, returning `201`.
+- `POST /functions/v1/game-nights/admin/team-names/{teamNameId}` edits `{ "name": "..." }`.
+- `POST /functions/v1/game-nights/admin/team-names/{teamNameId}/remove` removes a name from future generation. Existing game-night team names are unchanged.
+
+Team names must be trimmed, contain 1-40 characters, and be unique without case sensitivity. If the pool is empty, team generation returns `409 TEAM_NAME_POOL_EMPTY` until a name is added. Generated teams copy a selected pool value; later management changes do not rename existing teams.
+
 ## Add a participant during setup or play
 
 `POST /functions/v1/game-nights/{spectatorCode}/participants`
@@ -70,7 +85,7 @@ Apply a non-zero integer score delta atomically, validate that the participant b
 - `POST /functions/v1/game-nights/{spectatorCode}/teams/{teamId}` with `{ "name": "New name" }` renames it; host authorization required.
 - `POST /functions/v1/game-nights/{spectatorCode}/teams/{teamId}/delete` removes the team and clears member assignments; host authorization required.
 - `POST /functions/v1/game-nights/{spectatorCode}/teams/randomize` randomizes the full player roster across existing teams; host authorization required. The operation is atomic and resulting team sizes differ by at most one. Response: `{ "updatedCount": 6 }`.
-- `POST /functions/v1/game-nights/{spectatorCode}/teams/generate` creates teams and assigns all players atomically; host authorization required. Request is `{ "mode": "team_count" | "players_per_team", "count": 2 }`. Team names are randomly selected from a unique original space-themed list. Existing teams and assignments are replaced; individual scores are preserved. `team_count` creates exactly `count` teams and balances roster sizes within one. `players_per_team` creates `ceil(playerCount / count)` teams, each with at most `count` players. Counts must be positive and no greater than the roster size. Response: `{ "teamCount": 2, "updatedCount": 6 }`.
+- `POST /functions/v1/game-nights/{spectatorCode}/teams/generate` creates teams and assigns all players atomically; host authorization required. Request is `{ "mode": "team_count" | "players_per_team", "count": 2 }`. Team names are randomly selected from the administrator-managed pool; if more teams than pool entries are needed, numeric suffixes keep generated names unique. An empty pool returns `409 TEAM_NAME_POOL_EMPTY`. Existing teams and assignments are replaced; individual scores are preserved. `team_count` creates exactly `count` teams and balances roster sizes within one. `players_per_team` creates `ceil(playerCount / count)` teams, each with at most `count` players. Counts must be positive and no greater than the roster size. Response: `{ "teamCount": 2, "updatedCount": 6 }`.
 - `POST /functions/v1/game-nights/{spectatorCode}/participants/{participantId}/team` with `{ "teamId": "uuid" }` assigns the player, or `{ "teamId": null }` removes the assignment; host authorization required.
 
 These operations are allowed during setup and active play, and rejected after completion. Team names are unique within a game night. Team totals are derived in the returned game-night snapshot.

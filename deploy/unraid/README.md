@@ -32,6 +32,7 @@ Supabase self-hosting is community-supported. The operator is responsible for se
    - Set `APPDATA_ROOT` to a dedicated Unraid appdata directory for this stack. Do not point it at the WoW/MariaDB container's data.
    - Confirm `GAME_NIGHT_FUNCTIONS_PATH` is the absolute path to this checkout's `supabase/functions` directory.
    - Keep `ANON_KEY` and generated settings intact. The anonymous key is public browser configuration; service-role, JWT, and database credentials are secrets and must never be copied into browser settings.
+   - Keep the generated `GAME_NIGHT_ADMIN_PASSWORD` private. It protects global challenge and random team-name management; use at least 32 random characters and do not expose it to browsers or share it with players.
    - Keep `FUNCTIONS_VERIFY_JWT=false`, matching this repository's Supabase function configuration; the functions enforce the game's host/spectator capabilities themselves.
 
    The Supabase pooler is disabled by default so it does not publish database ports. Enable its `manual-database-access` profile only when needed for a secured local administration workflow; do not expose PostgreSQL to the internet.
@@ -42,6 +43,7 @@ Supabase self-hosting is community-supported. The operator is responsible for se
 2. Validate the project configuration. Resolve any unavailable host ports or missing-setting errors before starting.
 3. Start the project and wait for the Supabase API gateway and web service to report healthy.
 4. Open `http://<UNRAID-LAN-IP>:<APP_HTTP_PORT>` from another device on the LAN.
+   Use **Manage content** in the top navigation and enter `GAME_NIGHT_ADMIN_PASSWORD` to add, edit, or archive shared challenges and manage the random team-name pool without creating a game night. Archived challenges remain in existing game history.
 5. Start a game night, add at least two players, update a score, and open the spectator view on another device. Confirm live updates work. Complete a game night and confirm the leaderboard records the result.
 6. The host session is restored after a reload in the same browser tab. To reconnect from another device, use the room code and the private host recovery key revealed on the host board; do not share that key with spectators.
 7. While a game is active, use **Open display-only board** on the host board to open a widescreen-only tab, or share that display link with the monitor's browser. The display URL loads live standings, challenges, and timers without restoring host privileges or showing game controls. Viewers can also enter the room code and choose **Join display-only**.

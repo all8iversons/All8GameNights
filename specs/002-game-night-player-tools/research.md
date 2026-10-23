@@ -80,6 +80,18 @@
 
 **Alternatives considered**: Requiring the host to keep wide-screen mode in the same tab was rejected because it prevents using a separate monitor. Reusing a browser's stored host capability was rejected because the public display must not expose host controls.
 
+### Decision: Protect standalone content administration with a server-side admin password
+
+**Rationale**: Shared challenges and random team names exist independently of any game-night host capability. A separate secret configured only on the Edge Function server permits administrators to work before a room exists. Require at least 32 random characters, compare it in constant time, send it only in authorization headers, and keep it in page memory rather than browser storage. The Unraid preparation script generates a secret in its protected `.env`; local startup generates one in ignored `.env.local`.
+
+**Alternatives considered**: Requiring creation of a game night merely to obtain host authorization was rejected because the requested workflow must not depend on a room. Public write access was rejected because the shared content affects every game night.
+
+### Decision: Archive catalog challenges and persist the generated team-name pool
+
+**Rationale**: Archiving is equivalent to disabling a challenge, so existing challenge-round foreign keys, assignments, and history remain intact. A service-role-only database table stores team names globally and replaces the hard-coded generation pool; removing a name affects only future generated teams.
+
+**Alternatives considered**: Hard deletion of used challenges was rejected because it breaks history references. Editing a TypeScript constant for team names was rejected because it requires a code deployment for routine content changes.
+
 ### Decision: Give each player at most one unfinished round
 
 **Rationale**: This is the selected behavior. A player may receive another unused challenge after their current round is explicitly finished; each player's timer remains independent from other players.

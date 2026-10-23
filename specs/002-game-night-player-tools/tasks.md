@@ -225,6 +225,17 @@ No setup tasks.
 - [x] T058 Add a display-only join option and host-provided standalone display link in `src/app/App.tsx`, `src/features/game-night/HostSetup.tsx`, and `src/features/game-night/GameNightPage.tsx`; ensure the display URL bypasses stored host-session restoration and always opens the live board in read-only widescreen mode.
 - [x] T059 Add end-to-end coverage for display-only join, host-launched display in a second tab with saved host credentials, and suppression of mutation controls in `tests/e2e/live-game-night.spec.ts`.
 - [x] T060 Document display-only join and separate-monitor behavior in `specs/002-game-night-player-tools/spec.md`, `specs/002-game-night-player-tools/quickstart.md`, and `deploy/unraid/README.md`.
+
+## Phase 14: Global shared-content management
+
+### User Story 14 - Manage shared content without a game night
+
+- [x] T061 Add a protected global admin route with challenge add/edit/archive APIs and team-name pool list/add/edit/remove APIs in `supabase/functions/game-nights/admin.ts`, `supabase/functions/game-nights/challenges.ts`, `supabase/functions/game-nights/index.ts`, and `src/features/game-night/game-night-api.ts`.
+- [x] T062 Add a service-role-only seeded team-name pool and use it for future generated teams, returning a clear error when empty, in `supabase/migrations/009_global_content_management.sql` and `supabase/functions/game-nights/teams.ts`.
+- [x] T063 Add the standalone content-admin page and navigation, retaining the admin password only in page memory, in `src/features/admin/GlobalContentAdminPage.tsx`, `src/app/App.tsx`, and `src/app/App.css`.
+- [x] T064 Configure strong server-only admin passwords for Unraid and local development in `deploy/unraid/prepare-supabase.sh`, `deploy/unraid/.env.example`, `deploy/unraid/supabase.override.yaml`, `scripts/start-local.mjs`, and `.env.example`.
+- [x] T065 Add API integration coverage and E2E mock/UI scenarios for authentication, challenge archival, and team-name pool management without a game night in `tests/integration/admin.test.ts`, `tests/integration/setup.ts`, `tests/e2e/mock-backend.ts`, and `tests/e2e/live-game-night.spec.ts`.
+- [x] T066 Document admin access, challenge archive/history semantics, and random team-name pool behavior in `specs/002-game-night-player-tools/spec.md`, `specs/002-game-night-player-tools/plan.md`, `specs/002-game-night-player-tools/research.md`, `specs/002-game-night-player-tools/data-model.md`, `specs/002-game-night-player-tools/contracts/game-night-api.md`, `specs/002-game-night-player-tools/quickstart.md`, and `deploy/unraid/README.md`.
 ---
 
 ## Dependencies & Execution Order

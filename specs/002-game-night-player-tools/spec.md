@@ -86,7 +86,7 @@ As a host, I want to share a six-digit numeric code, so players can join the liv
 
 ### User Story 6 - Generate teams with a chosen size (Priority: P2)
 
-As a host, I want to set either the number of teams or players per team and have balanced teams generated with random space-themed names, so I can quickly organize the roster.
+As a host, I want to set either the number of teams or players per team and have balanced teams generated with random names from the shared pool, so I can quickly organize the roster.
 
 **Independent Test**: Generate teams for a roster using both sizing modes, verify the player counts and names, and confirm player scores are unchanged and previous teams are replaced.
 
@@ -188,6 +188,20 @@ As a host, I want to open or share a display-only game board, so a separate moni
 3. **Given** a display-only URL is opened in a browser with a saved host session, **When** the board loads, **Then** it does not restore host privileges or expose host, scoring, challenge, or timer controls.
 4. **Given** the game state changes, **When** the display-only board receives live updates, **Then** standings, challenges, and timer states update without user interaction.
 
+### User Story 14 - Manage shared content without a game night (Priority: P1)
+
+As an application administrator, I want to manage the shared challenge catalog and random team-name pool from the app outside a game night, so I can maintain reusable game content without creating a temporary room.
+
+**Independent Test**: Open global content management before creating a game, authenticate with the server-configured admin password, add/edit/archive a challenge, and add/edit/remove a random team name; verify unauthenticated requests fail and future generated teams use the updated pool.
+
+**Acceptance Scenarios**:
+
+1. **Given** no game night is active, **When** an administrator opens global content management with the configured admin password, **Then** they can list and add or edit challenges and random team names.
+2. **Given** a challenge is no longer wanted for future games, **When** the administrator archives it, **Then** it is unavailable for future draws while existing assignments and game history remain intact.
+3. **Given** a team name is added, edited, or removed from the pool, **When** a host later generates teams, **Then** only names currently in the pool are used; existing game-night team names do not change.
+4. **Given** a missing or invalid admin password, **When** a global content operation is requested, **Then** it is rejected and no content changes.
+5. **Given** global administration is not configured with a strong server-side secret, **When** the management endpoint is called, **Then** the operation is unavailable and does not fall back to public access.
+
 ### Edge Cases
 
 - Two hosts try to add players with the same name at nearly the same time; only one succeeds and the other receives a duplicate-name message.
@@ -206,6 +220,10 @@ As a host, I want to open or share a display-only game board, so a separate moni
 - Undoing the most recent finish is rejected if any unfinished challenge already exists for that participant.
 - Renaming a participant does not modify a similarly named player in another game night or previously completed game records.
 - Opening the display-only link in a browser that also has host credentials stored must not restore or display those host privileges.
+- The global admin password is server-side configuration, never bundled into browser assets or stored in browser persistence; management remains unavailable until a valid secret is configured.
+- Archiving an assigned challenge preserves its name and instructions in existing history.
+- Removing or editing a random team name affects future generated teams only and never renames teams already created in a game night.
+- Removing every random team name disables team generation with a clear error until an administrator adds a name.
 
 ## Requirements _(mandatory)_
 
@@ -233,7 +251,7 @@ As a host, I want to open or share a display-only game board, so a separate moni
 - **FR-020**: Newly created game nights MUST receive a unique six-digit numeric join code; previously issued long codes MUST remain usable.
 - **FR-021**: Invalid join-code attempts MUST be rate-limited by source IP, and public score submissions MUST remain rate-limited.
 - **FR-022**: Team standings MUST display the names of all players assigned to each team and clearly indicate when a team has no assigned players.
-- **FR-023**: The host MUST be able to generate teams by specifying either the number of teams or players per team; players MUST be distributed randomly and evenly, generated teams MUST use unique original space-themed names, and existing teams MUST be replaced atomically without changing individual scores.
+- **FR-023**: The host MUST be able to generate teams by specifying either the number of teams or players per team; players MUST be distributed randomly and evenly, generated teams MUST use unique names from the administrator-managed pool (adding a numeric suffix if more teams than pool entries are needed), and existing teams MUST be replaced atomically without changing individual scores.
 - **FR-024**: The host MUST be able to remove an active player during setup or play; removal MUST preserve scores and challenge history, stop and finish any unfinished round, and exclude the player from active roster operations and standings.
 - **FR-025**: The host MUST be able to list, add, edit, enable, and disable challenges in the shared catalog; unauthorized viewers MUST NOT manage the catalog, and edits MUST be reflected immediately in current assignments.
 - **FR-026**: Disabled challenges MUST be excluded from future draws without deleting existing challenge history or making already-assigned challenges available again.
@@ -245,6 +263,10 @@ As a host, I want to open or share a display-only game board, so a separate moni
 - **FR-032**: During an active game, the host MUST be able to undo the finish of a player's most recently selected challenge only when that player has no unfinished challenge; the round MUST remain in history and return to unfinished `ready` timer state.
 - **FR-033**: The host MUST be able to rename a participant in setup or active play; names MUST be trimmed, contain 1-40 characters, and remain unique among active participants in that game night. Renaming MUST affect only the current game-night participant.
 - **FR-034**: A viewer MUST be able to join directly into a display-only widescreen board using the join code or a host-provided display link. This view MUST NOT restore host credentials from browser storage or expose score, challenge, timer, or game-management controls.
+- **FR-035**: An administrator MUST be able to manage the shared challenge catalog and random team-name pool without creating or joining a game night, using a server-configured password with at least 32 characters that is never exposed in browser configuration or persistent browser storage.
+- **FR-036**: Global challenge management MUST support add, edit, and archive operations. Archiving MUST disable future draws without removing a challenge referenced by current assignments or historical rounds.
+- **FR-037**: Global team-name management MUST support listing, adding, editing, and removing names from the pool used by future randomized team generation; existing game-night teams MUST remain unchanged.
+- **FR-038**: Global content endpoints MUST reject missing or invalid admin credentials and MUST NOT permit writes when the server admin password is unconfigured or too weak.
 
 ### Key Entities
 
@@ -276,6 +298,8 @@ As a host, I want to open or share a display-only game board, so a separate moni
 - **SC-016**: Undoing the latest eligible challenge finish restores the same round to unfinished `ready` state without deleting its history, while attempts against older rounds or a participant with another unfinished round are rejected without mutation.
 - **SC-017**: A valid host rename updates the current game's participant snapshot; duplicate, unauthorized, invalid, and completed-game rename attempts leave saved data unchanged.
 - **SC-018**: A display-only board opens directly in widescreen mode, receives live updates, and exposes no mutation controls, including when host credentials are stored in the same browser.
+- **SC-019**: Before creating any game night, an administrator can authenticate and manage challenges and random team names; unauthenticated requests and invalid content are rejected without mutation.
+- **SC-020**: Archiving a challenge preserves its existing assignments and history while preventing future draws, and generated team names reflect the current managed pool without changing teams in existing game nights.
 
 ## Assumptions
 

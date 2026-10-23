@@ -17,9 +17,15 @@ Open the Vite URL printed in the terminal, normally `http://localhost:5173`. The
 
 ## Validate the feature
 
+1. Start local Supabase with `npm run start:local`; the first start generates a strong global content admin password in the ignored `.env.local` file. Use that value to open **Manage content** before creating a game night.
+2. In global content management, add and edit a challenge, then archive it. Verify it remains visible as unavailable for future draws. Add, edit, and remove a random team name and verify the list updates without a game night.
+3. Create a game night, generate teams, and verify their names come from the current random team-name pool. Existing game-night teams should not change when a pool value is later edited or removed.
+
+## Validate game-night workflows
+
 1. Create a game night and add at least two players.
 2. Start play, then add a third player; verify the roster updates with a zero score.
-3. Create teams using either **Number of teams** or **Players per team**; verify space-themed names, balanced assignments, replacement of old teams, and preserved individual scores. Use **Randomize players across teams** to reshuffle within the existing teams.
+3. Create teams using either **Number of teams** or **Players per team**; verify names come from the shared pool, assignments are balanced, old teams are replaced, and individual scores are preserved. Use **Randomize players across teams** to reshuffle within the existing teams.
 4. Draw different challenges for two players. Start one timer, start the other, pause one, and verify the other remains running. For a player with an unfinished challenge, choose **Issue new challenge** and confirm; verify their prior round is preserved as finished with its timer stopped. Cancel once and verify the current round remains unchanged.
 5. Finish one round, draw the next unused challenge for that player, and verify the prior round remains in the history of rounds without blocking the new assignment.
 6. Draw unfinished challenges for two teammates and trade them; verify their assignments swap once. Confirm the trade control excludes teammates with a running timer, and that the room-code disclosure is visible.
@@ -40,6 +46,7 @@ npm run build
 npm run lint
 npm run test -- --run tests/unit/game-night.test.ts
 npm run test:integration -- tests/integration/game-night.test.ts
+npm run test:integration -- tests/integration/admin.test.ts
 npm run test:e2e -- tests/e2e/live-game-night.spec.ts
 ```
 

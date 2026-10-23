@@ -60,6 +60,75 @@ export const gameNightApi = {
       hostCapability,
     }),
 
+  adminChallengeCatalog: (adminPassword: string) =>
+    apiRequest<{ challenges: Challenge[] }>('game-nights/admin/challenges', {
+      adminPassword,
+    }),
+
+  adminCreateChallenge: (
+    adminPassword: string,
+    challenge: Pick<Challenge, 'name' | 'instructions'>,
+  ) =>
+    apiRequest<{ challenge: Challenge }>('game-nights/admin/challenges', {
+      method: 'POST',
+      adminPassword,
+      body: challenge,
+    }),
+
+  adminUpdateChallenge: (
+    adminPassword: string,
+    challengeId: string,
+    challenge: Pick<Challenge, 'name' | 'instructions' | 'enabled'>,
+  ) =>
+    apiRequest<{ challenge: Challenge }>(`game-nights/admin/challenges/${challengeId}`, {
+      method: 'POST',
+      adminPassword,
+      body: challenge,
+    }),
+
+  adminArchiveChallenge: (adminPassword: string, challengeId: string) =>
+    apiRequest<{ challenge: Challenge }>(
+      `game-nights/admin/challenges/${challengeId}/archive`,
+      {
+        method: 'POST',
+        adminPassword,
+        body: {},
+      },
+    ),
+
+  adminTeamNames: (adminPassword: string) =>
+    apiRequest<{ teamNames: Array<{ id: string; name: string; createdAt: string }> }>(
+      'game-nights/admin/team-names',
+      { adminPassword },
+    ),
+
+  adminCreateTeamName: (adminPassword: string, name: string) =>
+    apiRequest<{ teamName: { id: string; name: string; createdAt: string } }>(
+      'game-nights/admin/team-names',
+      {
+        method: 'POST',
+        adminPassword,
+        body: { name },
+      },
+    ),
+
+  adminUpdateTeamName: (adminPassword: string, id: string, name: string) =>
+    apiRequest<{ teamName: { id: string; name: string; createdAt: string } }>(
+      `game-nights/admin/team-names/${id}`,
+      {
+        method: 'POST',
+        adminPassword,
+        body: { name },
+      },
+    ),
+
+  adminRemoveTeamName: (adminPassword: string, id: string) =>
+    apiRequest<{ removed: true }>(`game-nights/admin/team-names/${id}/remove`, {
+      method: 'POST',
+      adminPassword,
+      body: {},
+    }),
+
   createChallenge: (
     spectatorCode: string,
     hostCapability: string,

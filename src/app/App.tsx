@@ -6,8 +6,9 @@ import { GameNightPage } from '../features/game-night/GameNightPage';
 import { HostSetup } from '../features/game-night/HostSetup';
 import { gameNightApi } from '../features/game-night/game-night-api';
 import { LeaderboardPage } from '../features/history/LeaderboardPage';
+import { GlobalContentAdminPage } from '../features/admin/GlobalContentAdminPage';
 
-type Page = 'home' | 'leaderboard' | 'game';
+type Page = 'home' | 'leaderboard' | 'game' | 'admin';
 
 export function App() {
   const displayCodeAtLoad = useRef(new URLSearchParams(window.location.search).get('display'));
@@ -103,6 +104,12 @@ export function App() {
             >
               Hall of Fame
             </button>
+            <button
+              className={page === 'admin' ? 'nav-link active' : 'nav-link'}
+              onClick={() => setPage('admin')}
+            >
+              Manage content
+            </button>
           </nav>
         </header>
       )}
@@ -144,6 +151,7 @@ export function App() {
           />
         )}
         {page === 'leaderboard' && <LeaderboardPage />}
+        {page === 'admin' && <GlobalContentAdminPage />}
       </main>
     </div>
   );

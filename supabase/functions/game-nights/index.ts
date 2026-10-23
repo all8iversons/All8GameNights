@@ -7,6 +7,7 @@ import {
   readJson,
 } from '../_shared/http.ts';
 import { serviceClient } from '../_shared/game-night-auth.ts';
+import { manageGlobalContent } from './admin.ts';
 import { getSnapshot, mapParticipant, requireHost, resolveNight } from './shared.ts';
 import { startGameNight } from './start.ts';
 import { addParticipant, removeParticipant, renameParticipant } from './participants.ts';
@@ -83,6 +84,8 @@ async function handle(request: Request): Promise<Response> {
   const pathParts = pathname.split('/').filter(Boolean);
   const functionIndex = pathParts.indexOf('game-nights');
   const parts = functionIndex === -1 ? pathParts : pathParts.slice(functionIndex + 1);
+
+  if (parts[0] === 'admin') return manageGlobalContent(request, parts.slice(1));
 
   if (request.method === 'POST' && parts.length === 0) {
     await readJson<Record<string, never>>(request);

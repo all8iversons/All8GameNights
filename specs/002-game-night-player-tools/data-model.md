@@ -46,7 +46,7 @@ Named group within one game night.
 
 **Relationships**: Has zero or more assigned participants. Its displayed score is derived as the sum of member participant scores. Removing a team clears its members' assignments but does not remove players or scores.
 
-Hosts can randomize all current participants across existing teams, assigning team sizes that differ by at most one. They can also generate a replacement team set by choosing a team count or players-per-team capacity. Generated teams use unique original space-themed names, are assigned randomly and evenly in one transaction, and preserve individual player scores. A capacity-based setup may produce a smaller final team.
+Hosts can randomize all current participants across existing teams, assigning team sizes that differ by at most one. They can also generate a replacement team set by choosing a team count or players-per-team capacity. Generated teams use names from the shared pool, are assigned randomly and evenly in one transaction, and preserve individual player scores. A capacity-based setup may produce a smaller final team. When the requested team count exceeds the pool size, numeric suffixes keep generated names unique.
 
 Hosts can randomize all current participants across existing teams. The server randomizes player and team order in one transaction and assigns team sizes that differ by no more than one; players are not left unassigned by this operation.
 
@@ -96,6 +96,24 @@ Challenges are shared across all game nights. Hosts can list, add, edit, enable,
 | `name`         | string  | Trimmed, 1-100 characters, globally unique |
 | `instructions` | string  | Trimmed, 1-1,000 characters                |
 | `enabled`      | boolean | Controls eligibility for future draws      |
+
+Administrators manage this catalog outside game-night flows through endpoints protected by a server-configured admin password. Archiving sets `enabled` to false and does not delete the challenge; existing rounds continue to reference and display the catalog record.
+
+## Random team-name pool
+
+Global list used only when a host generates a new set of teams.
+
+| Field | Type | Rules |
+|---|---|---|
+| `id` | UUID | Primary identifier |
+| `name` | string | Trimmed, 1-40 characters, unique without case sensitivity |
+| `created_at` | timestamp | Set when added |
+
+The pool is service-role-only and is seeded with the existing original space-themed names. Administrators can list, add, edit, and remove pool entries without a game night. Generated team records copy the selected string, so later pool edits or removals do not modify existing teams. Team generation fails with an actionable error when the pool is empty.
+
+## Global content administration
+
+Global content writes and reads require a server-configured `GAME_NIGHT_ADMIN_PASSWORD` with at least 32 characters. The secret is compared on the server and is not part of browser runtime configuration, persistent browser storage, or the database. The admin UI retains it in memory only while the management page is unlocked. Missing or weak server configuration makes global administration unavailable.
 
 ## Team totals
 
