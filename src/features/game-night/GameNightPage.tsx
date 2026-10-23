@@ -56,6 +56,19 @@ export function GameNightPage({
     }
   }
 
+  async function tradeChallenges(firstParticipantId: string, secondParticipantId: string) {
+    setBusyAction(`trade:${firstParticipantId}:${secondParticipantId}`);
+    try {
+      await gameNightApi.tradeChallenges(spectatorCode, firstParticipantId, secondParticipantId);
+      setError('');
+      await refresh();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Could not trade challenges.');
+    } finally {
+      setBusyAction('');
+    }
+  }
+
   async function timerAction(
     roundId: string,
     action: 'start' | 'pause' | 'resume' | 'reset' | 'finish',
@@ -221,6 +234,29 @@ export function GameNightPage({
               );
               const currentRound = rounds.at(-1) ?? null;
               const hasUnfinishedRound = rounds.some((round) => !round.finishedAt);
+              const tradeCandidates = gameNight.participants.flatMap((teammate) => {
+                if (
+                  participant.teamId === null ||
+                  teammate.id === participant.id ||
+                  teammate.teamId !== participant.teamId
+                ) {
+                  return [];
+                }
+                const teammateRound = gameNight.challengeRounds.find(
+                  (round) => round.participantId === teammate.id && !round.finishedAt,
+                );
+                return teammateRound ? [{ teammate, round: teammateRound }] : [];
+              });
+              const tradeOptions =
+                currentRound && !currentRound.finishedAt && currentRound.timerStatus !== 'running'
+                  ? tradeCandidates
+                      .filter(({ round }) => round.timerStatus !== 'running')
+                      .map(({ teammate: { id, displayName } }) => ({ id, displayName }))
+                  : [];
+              const tradeBlockedByTimer =
+                currentRound?.timerStatus === 'running' ||
+                (tradeCandidates.length > 0 &&
+                  tradeCandidates.every(({ round }) => round.timerStatus === 'running'));
               return (
                 <div className="player-round" key={participant.id}>
                   <ChallengePanel
@@ -232,7 +268,13 @@ export function GameNightPage({
                     catalogEmpty={gameNight.availableChallengeCount === 0}
                     catalogAvailable={gameNight.challengeCatalogAvailable}
                     busy={busyAction === `draw:${participant.id}`}
+                    tradeOptions={tradeOptions}
+                    tradeBlockedByTimer={tradeBlockedByTimer}
+                    tradeBusy={busyAction.startsWith('trade:')}
                     onDraw={() => void drawChallenge(participant.id)}
+                    onTrade={(teammateId) =>
+                      void tradeChallenges(participant.id, teammateId)
+                    }
                   />
                   {hasUnfinishedRound && currentRound && (
                     <ChallengeTimer

@@ -26,6 +26,142 @@ describe.skipIf(!integrationEnvironment.url || !integrationEnvironment.publishab
       expect(rejected.body.error.code).toBe('UNAUTHORIZED');
     });
 
+    it('trades current challenges only between teammates and blocks running timers', async () => {
+      const { hostCapability, spectatorCode } = await createActiveGame();
+      const snapshotPath = `game-nights/${spectatorCode}`;
+      const initial = await invoke<{
+        gameNight: { participants: Array<{ id: string }> };
+      }>(snapshotPath);
+      const [first, second] = initial.body.gameNight.participants;
+      const team = await invoke<{ team: { id: string } }>(`game-nights/${spectatorCode}/teams`, {
+        method: 'POST',
+        hostCapability,
+        body: { name: `Trade test ${crypto.randomUUID()}` },
+      });
+      for (const participant of [first, second]) {
+        expect(
+          (
+            await invoke(
+              `game-nights/${spectatorCode}/participants/${participant.id}/team`,
+              {
+                method: 'POST',
+                hostCapability,
+                body: { teamId: team.body.team.id },
+              },
+            )
+          ).status,
+        ).toBe(200);
+      }
+
+      for (const participant of [first, second]) {
+        expect(
+          (
+            await invoke(`game-nights/${spectatorCode}/challenge-draws`, {
+              method: 'POST',
+              hostCapability,
+              body: { participantId: participant.id, idempotencyKey: crypto.randomUUID() },
+            })
+          ).status,
+        ).toBe(201);
+      }
+
+      const beforeTrade = await invoke<{
+        gameNight: {
+          challengeRounds: Array<{
+            challenge: { id: string };
+            participantId: string;
+          }>;
+        };
+      }>(snapshotPath);
+      const tradePath = `game-nights/${spectatorCode}/challenge-trades`;
+      const trade = {
+        firstParticipantId: first.id,
+        secondParticipantId: second.id,
+        idempotencyKey: crypto.randomUUID(),
+      };
+      expect(
+        (await invoke(tradePath, { method: 'POST', body: trade })).status,
+      ).toBe(200);
+      expect(
+        (await invoke(tradePath, { method: 'POST', body: trade })).status,
+      ).toBe(200);
+
+      const swapped = await invoke<{
+        gameNight: {
+          challengeRounds: Array<{
+            challenge: { id: string };
+            id: string;
+            participantId: string;
+          }>;
+        };
+      }>(snapshotPath);
+      const firstRound = swapped.body.gameNight.challengeRounds.find(
+        ({ participantId }) => participantId === first.id,
+      );
+      const originalFirstRound = beforeTrade.body.gameNight.challengeRounds.find(
+        ({ participantId }) => participantId === first.id,
+      );
+      const originalSecondRound = beforeTrade.body.gameNight.challengeRounds.find(
+        ({ participantId }) => participantId === second.id,
+      );
+      expect(firstRound).toBeDefined();
+      expect(originalFirstRound).toBeDefined();
+      expect(originalSecondRound).toBeDefined();
+      if (!firstRound) throw new Error('First player has no active round after the trade.');
+      if (!originalSecondRound)
+        throw new Error('Second player has no active round before the trade.');
+      expect(firstRound.challenge.id).toBe(originalSecondRound.challenge.id);
+      const secondRound = swapped.body.gameNight.challengeRounds.find(
+        ({ participantId }) => participantId === second.id,
+      );
+      if (!secondRound) throw new Error('Second player has no active round after the trade.');
+      if (!originalFirstRound)
+        throw new Error('First player has no active round before the trade.');
+      expect(secondRound.challenge.id).toBe(originalFirstRound.challenge.id);
+      const runningRoundId = firstRound.id;
+      expect(
+        (
+          await invoke(`game-nights/${spectatorCode}/challenge-rounds/${runningRoundId}/timer`, {
+            method: 'POST',
+            hostCapability,
+            body: { action: 'start', durationSeconds: 60 },
+          })
+        ).status,
+      ).toBe(200);
+
+      const blockedTrade = await invoke<{ error: { code: string } }>(tradePath, {
+        method: 'POST',
+        body: { ...trade, idempotencyKey: crypto.randomUUID() },
+      });
+      expect(blockedTrade.status).toBe(409);
+      expect(blockedTrade.body.error.code).toBe('CHALLENGE_TIMER_RUNNING');
+
+      const otherTeam = await invoke<{ team: { id: string } }>(
+        `game-nights/${spectatorCode}/teams`,
+        {
+          method: 'POST',
+          hostCapability,
+          body: { name: `Other trade team ${crypto.randomUUID()}` },
+        },
+      );
+      expect(otherTeam.status).toBe(201);
+      expect(
+        (
+          await invoke(`game-nights/${spectatorCode}/participants/${second.id}/team`, {
+            method: 'POST',
+            hostCapability,
+            body: { teamId: otherTeam.body.team.id },
+          })
+        ).status,
+      ).toBe(200);
+      const crossTeamTrade = await invoke<{ error: { code: string } }>(tradePath, {
+        method: 'POST',
+        body: { ...trade, idempotencyKey: crypto.randomUUID() },
+      });
+      expect(crossTeamTrade.status).toBe(409);
+      expect(crossTeamTrade.body.error.code).toBe('PLAYERS_NOT_TEAMMATES');
+    });
+
     it('updates scores idempotently and exposes the same authoritative snapshot to spectators', async () => {
       const { hostCapability, spectatorCode } = await createActiveGame();
       expect(spectatorCode).toMatch(/^\d{6}$/);

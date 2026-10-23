@@ -49,6 +49,7 @@ export async function installMockBackend(page: Page) {
   }
   const spectatorCode = '482731';
   const hostCapability = 'a'.repeat(64);
+  const completedTrades = new Map<string, string>();
 
   await page.route('http://127.0.0.1:54321/functions/v1/**', async (route: Route) => {
     const request = route.request();
@@ -268,6 +269,71 @@ export async function installMockBackend(page: Page) {
       };
       gameNight.challengeRounds.push(challengeRound);
       return send({ challengeRound }, 201);
+    }
+
+    if (method === 'POST' && segments[2] === 'challenge-trades') {
+      const { firstParticipantId, secondParticipantId, idempotencyKey } = request.postDataJSON() as {
+        firstParticipantId: string;
+        secondParticipantId: string;
+        idempotencyKey: string;
+      };
+      const trade = JSON.stringify([firstParticipantId, secondParticipantId]);
+      const previousTrade = completedTrades.get(idempotencyKey);
+      if (previousTrade) {
+        if (previousTrade !== trade)
+          return send(
+            { error: { code: 'IDEMPOTENCY_KEY_REUSED', message: 'Request key was reused' } },
+            409,
+          );
+        return send({ traded: true });
+      }
+
+      const first = gameNight.participants.find(({ id }) => id === firstParticipantId);
+      const second = gameNight.participants.find(({ id }) => id === secondParticipantId);
+      if (!first || !second)
+        return send({ error: { code: 'NOT_FOUND', message: 'Player not found' } }, 404);
+      if (!first.teamId || first.teamId !== second.teamId)
+        return send(
+          {
+            error: {
+              code: 'PLAYERS_NOT_TEAMMATES',
+              message: 'Challenges can only be traded between players on the same team.',
+            },
+          },
+          409,
+        );
+
+      const firstRound = gameNight.challengeRounds.find(
+        ({ participantId, finishedAt }) => participantId === firstParticipantId && !finishedAt,
+      );
+      const secondRound = gameNight.challengeRounds.find(
+        ({ participantId, finishedAt }) => participantId === secondParticipantId && !finishedAt,
+      );
+      if (!firstRound || !secondRound)
+        return send(
+          {
+            error: {
+              code: 'CHALLENGE_NOT_AVAILABLE',
+              message: 'Both teammates need an unfinished challenge to trade.',
+            },
+          },
+          409,
+        );
+      if (firstRound.timerStatus === 'running' || secondRound.timerStatus === 'running')
+        return send(
+          {
+            error: {
+              code: 'CHALLENGE_TIMER_RUNNING',
+              message: 'Stop or pause both challenge timers before trading.',
+            },
+          },
+          409,
+        );
+
+      firstRound.participantId = secondParticipantId;
+      secondRound.participantId = firstParticipantId;
+      completedTrades.set(idempotencyKey, trade);
+      return send({ traded: true });
     }
 
     if (method === 'POST' && segments[2] === 'challenge-rounds' && segments[4] === 'timer') {

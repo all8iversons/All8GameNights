@@ -63,6 +63,22 @@ Response `201` contains the unique challenge round with assigned player ID, chal
 
 Host authorization required. Supported actions: `start`, `pause`, `resume`, `reset`, and `finish`. `start` requires a positive whole-second `durationSeconds`; other actions do not. Each operation changes only the referenced player's round. `finish` stops an active timer and marks the round finished, allowing a later draw for that player. `reset` does not finish a round. Reject invalid transitions with `409`.
 
+## Trade unfinished challenges with a teammate
+
+`POST /functions/v1/game-nights/{spectatorCode}/challenge-trades`
+
+No host authorization header is required; anyone with the room code can request a trade, and the code does not verify player identity. Trades share the existing limit of 120 public score and trade mutations per IP and game night per 15 minutes. Request:
+
+```json
+{
+  "firstParticipantId": "uuid",
+  "secondParticipantId": "uuid",
+  "idempotencyKey": "unique-request-id"
+}
+```
+
+Response `200`: `{ "traded": true }`. The players must belong to the same non-null team and each have one unfinished challenge in the active game night. The request atomically swaps the player assignments while retaining the challenge records and timer state. Reject the trade with `409` if either timer is running, either challenge is unavailable, the participants are not teammates, or the idempotency key was used for a different operation/request. Repeating the same request with the same key does not swap them again.
+
 ## Read the game snapshot
 
 `GET /functions/v1/game-nights/{spectatorCode}`
@@ -73,4 +89,4 @@ Response includes participants with team assignments, teams with derived totals,
 
 Committed participant, team, score, and challenge-round changes publish the existing payload-free `state_changed` notification. Clients fetch a new snapshot as the authoritative state.
 
-Errors preserve `{ "error": { "code": "VALIDATION_ERROR", "message": "..." } }`. Expected codes include `UNAUTHORIZED`, `NOT_FOUND`, `DUPLICATE_PARTICIPANT`, `DUPLICATE_TEAM`, `NIGHT_COMPLETED`, `ROUND_ALREADY_ACTIVE`, `NO_UNUSED_CHALLENGES`, `INVALID_STATE_TRANSITION`, `NO_TEAMS`, and `RATE_LIMITED`.
+Errors preserve `{ "error": { "code": "VALIDATION_ERROR", "message": "..." } }`. Expected codes include `UNAUTHORIZED`, `NOT_FOUND`, `DUPLICATE_PARTICIPANT`, `DUPLICATE_TEAM`, `NIGHT_COMPLETED`, `ROUND_ALREADY_ACTIVE`, `NO_UNUSED_CHALLENGES`, `INVALID_STATE_TRANSITION`, `NO_TEAMS`, `RATE_LIMITED`, `IDEMPOTENCY_KEY_REUSED`, `CHALLENGE_NOT_AVAILABLE`, `CHALLENGE_TIMER_RUNNING`, and `PLAYERS_NOT_TEAMMATES`.

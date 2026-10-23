@@ -104,6 +104,20 @@ export const gameNightApi = {
       body: { participantId, idempotencyKey: createIdempotencyKey() },
     }),
 
+  tradeChallenges: (
+    spectatorCode: string,
+    firstParticipantId: string,
+    secondParticipantId: string,
+  ) =>
+    apiRequest<{ traded: true }>(`game-nights/${spectatorCode}/challenge-trades`, {
+      method: 'POST',
+      body: {
+        firstParticipantId,
+        secondParticipantId,
+        idempotencyKey: createIdempotencyKey(),
+      },
+    }),
+
   timer: (
     spectatorCode: string,
     hostCapability: string,

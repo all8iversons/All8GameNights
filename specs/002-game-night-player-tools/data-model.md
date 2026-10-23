@@ -68,12 +68,15 @@ Existing round record, extended with an assigned player and explicit completion 
 - Round finish is separate from timer reset. Finish stops any active timer and releases the player for a later challenge.
 - Timer operations apply only to the specified round; the database deadline remains authoritative.
 - Challenge assignment and finish are rejected after game completion.
+- Teammates may swap their unfinished challenge assignments in an active game. The round records and timer state stay attached to the challenge; trades are rejected while either timer is running and idempotent retries cannot swap twice.
 
 ## Score submission
 
 No player account is added. The spectator code authorizes casual score-submission requests; the selected participant ID/name identifies whose score changes, not the submitter.
 
 **Validation**: Require a valid spectator code, active game night, existing participant in that night, non-zero integer delta, valid idempotency key, and request rate limits. Anyone with the spectator code can submit for any participant; the user-facing experience must disclose this.
+
+Challenge trades use the same shared room-code access model and disclose that the room code does not verify the requester’s identity. Public score and trade mutations share the per-IP, per-game-night rate limit. The database requires both participants to be on the same non-null team and to have unfinished rounds.
 
 ## Team totals
 

@@ -84,6 +84,7 @@ tests/
 - Store the assigned participant on each challenge round. Enforce one unfinished round per player and one draw of each challenge per game night with database constraints/transactions.
 - Add an explicit `finish` round action separate from timer reset. Resetting the timer alone does not release a player's active round.
 - Keep timer state and deadlines on each challenge round. Timer requests identify the player's round, so parallel players do not overwrite each other.
+- Allow room-code holders to trade unfinished challenge assignments between same-team players; reject running timers and make retries idempotent.
 - Keep host-only mutations bearer-authorized. Player score changes use the spectator code as a shared, low-assurance capability, reject completed events and unknown participants, validate integer deltas, and apply updates atomically with idempotency.
 - Generate new six-digit join codes with cryptographic randomness and collision retries while retaining compatibility with existing long codes. Count invalid lookups per source IP and rate-limit them; keep the separate high-entropy host capability for host operations.
 - Randomize all current players into existing teams through a single host-authorized database operation, assigning team sizes that differ by at most one.

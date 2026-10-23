@@ -97,6 +97,22 @@ As a host, I want to set either the number of teams or players per team and have
 3. **Given** existing teams and player scores, **When** the host generates teams, **Then** the existing teams and assignments are replaced atomically while individual player scores remain unchanged.
 4. **Given** an invalid count or empty roster, **When** the host requests team generation, **Then** no team or assignment changes are committed and a clear validation error is shown.
 
+### User Story 7 - Trade unfinished challenges with a teammate (Priority: P2)
+
+As a player, I want to swap my unfinished challenge with a teammate's unfinished challenge, so our team can rebalance its current challenges without drawing new ones.
+
+**Why this priority**: Teammates can adapt their current challenges while preserving the shared challenge pool and round history.
+
+**Independent Test**: Give two teammates unfinished challenges, trade them, and verify the assignments swap exactly once. Verify players on different teams and players with a running timer cannot trade.
+
+**Acceptance Scenarios**:
+
+1. **Given** two players on the same team each have an unfinished challenge, **When** either requests a trade, **Then** their challenge assignments swap without drawing new challenges or changing timer state.
+2. **Given** either challenge timer is running, **When** a trade is requested, **Then** the trade is rejected and the board explains that both timers must be paused or stopped.
+3. **Given** the players are on different teams or either has no unfinished challenge, **When** a trade is requested, **Then** no assignment changes and a clear error is returned.
+4. **Given** a trade request is retried with the same idempotency key, **When** the retry is processed, **Then** the assignments remain swapped only once.
+5. **Given** someone has the shared room code, **When** they request a same-team trade, **Then** the interface discloses that the room code does not verify player identity.
+
 ### Edge Cases
 
 - Two hosts try to add players with the same name at nearly the same time; only one succeeds and the other receives a duplicate-name message.

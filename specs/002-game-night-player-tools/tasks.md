@@ -123,6 +123,25 @@ No setup tasks.
 
 ---
 
+## Phase 8: User Story 7 - Trade unfinished challenges with a teammate
+
+**Goal**: Swap current unfinished challenges between teammates without changing the challenge pool or timer state.
+
+**Independent Test**: Verify a same-team swap, idempotent retry, and rejection for running timers or different teams.
+
+### Tests for User Story 7
+
+- [x] T030 Add integration and end-to-end coverage for successful swaps, idempotent retry, cross-team rejection, and running-timer restrictions in `tests/integration/game-night.test.ts`, `tests/e2e/mock-backend.ts`, and `tests/e2e/challenge-timer.spec.ts`.
+
+### Implementation for User Story 7
+
+- [x] T031 Add the atomic challenge-trade RPC and request-idempotency persistence in `supabase/migrations/006_team_challenge_trades.sql`.
+- [x] T032 Add the public room-code trade endpoint and API call in `supabase/functions/game-nights/trade-challenges.ts`, `supabase/functions/game-nights/index.ts`, and `src/features/game-night/game-night-api.ts`.
+- [x] T033 Add teammate trade controls, running-timer eligibility feedback, and the shared room-code disclosure in `src/features/game-night/GameNightPage.tsx` and `src/features/challenge/ChallengePanel.tsx`.
+- [ ] T034 Run build, lint, focused integration and end-to-end checks; resolve any regressions.
+
+---
+
 ## Dependencies & Execution Order
 
 ### Phase Dependencies
@@ -138,6 +157,7 @@ No setup tasks.
 - **US2 (P1)**: Depends on foundational schema/types; otherwise independent of US1.
 - **US3 (P2)**: Depends on the shared participant snapshot; otherwise independent of US1 and US2.
 - **US4 (P2)**: Depends on shared score/snapshot flow. Team-total verification is finalized with US3; the individual score submission can be tested independently.
+- **US7 (P2)**: Depends on team assignments and player-scoped unfinished challenge rounds from US2 and US3.
 
 ### Parallel Opportunities
 

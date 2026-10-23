@@ -14,6 +14,7 @@ import { updateScore } from './score.ts';
 import { completeGameNight } from './complete.ts';
 import { readGameNight } from './read.ts';
 import { drawChallenge } from './draw-challenge.ts';
+import { tradeChallenges } from './trade-challenges.ts';
 import { controlTimer } from './challenge-timer.ts';
 import {
   assignParticipantToTeam,
@@ -109,6 +110,7 @@ async function handle(request: Request): Promise<Response> {
     return updateScore(request, spectatorCode, id);
   }
   if (resource === 'challenge-draws') return drawChallenge(request, spectatorCode);
+  if (resource === 'challenge-trades') return tradeChallenges(request, spectatorCode);
   if (resource === 'challenge-rounds' && id && action === 'timer') {
     return controlTimer(request, spectatorCode, id);
   }
