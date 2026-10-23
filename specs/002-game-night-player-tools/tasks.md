@@ -208,6 +208,25 @@ No setup tasks.
 
 ---
 
+## Phase 13: Host correction controls
+
+### User Story 11 - Undo the latest challenge finish
+
+- [x] T054 Add integration and end-to-end coverage for reopening the latest finished challenge, rejecting older rounds and existing unfinished rounds, and restoring timer state in `tests/integration/challenges.test.ts`, `tests/e2e/challenge-timer.spec.ts`, and `tests/e2e/mock-backend.ts`.
+- [x] T055 Add an atomic host-only undo operation, API route, client method, and challenge-card control that reopens only the latest eligible round in `supabase/migrations/008_undo_challenge_finish_and_rename_players.sql`, `supabase/functions/game-nights/challenge-timer.ts`, `supabase/functions/game-nights/index.ts`, `src/features/game-night/game-night-api.ts`, `src/features/challenge/ChallengePanel.tsx`, and `src/features/game-night/GameNightPage.tsx`.
+
+### User Story 12 - Rename a participant in the current game
+
+- [x] T056 Add a host-only rename operation and inline rename UI for the current game-night participant, including validation, duplicate-name handling, snapshot updates, and E2E mock behavior in `supabase/migrations/008_undo_challenge_finish_and_rename_players.sql`, `supabase/functions/game-nights/participants.ts`, `supabase/functions/game-nights/index.ts`, `supabase/functions/game-nights/shared.ts`, `src/features/game-night/game-night-api.ts`, `src/features/game-night/HostControls.tsx`, `src/app/App.css`, and `tests/e2e/mock-backend.ts`.
+- [x] T057 Document undo eligibility, history and timer behavior, current-game-only renaming, validation, and test scenarios in `specs/002-game-night-player-tools/spec.md`, `specs/002-game-night-player-tools/plan.md`, `specs/002-game-night-player-tools/research.md`, `specs/002-game-night-player-tools/data-model.md`, `specs/002-game-night-player-tools/contracts/game-night-api.md`, and `specs/002-game-night-player-tools/quickstart.md`.
+
+### User Story 13 - Open a separate display-only board
+
+- [x] T058 Add a display-only join option and host-provided standalone display link in `src/app/App.tsx`, `src/features/game-night/HostSetup.tsx`, and `src/features/game-night/GameNightPage.tsx`; ensure the display URL bypasses stored host-session restoration and always opens the live board in read-only widescreen mode.
+- [x] T059 Add end-to-end coverage for display-only join, host-launched display in a second tab with saved host credentials, and suppression of mutation controls in `tests/e2e/live-game-night.spec.ts`.
+- [x] T060 Document display-only join and separate-monitor behavior in `specs/002-game-night-player-tools/spec.md`, `specs/002-game-night-player-tools/quickstart.md`, and `deploy/unraid/README.md`.
+---
+
 ## Dependencies & Execution Order
 
 ### Phase Dependencies

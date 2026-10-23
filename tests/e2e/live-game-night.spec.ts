@@ -67,6 +67,53 @@ test('joins a game night using a six-digit code', async ({ page }) => {
   await expect(page.getByRole('heading', { name: /game night is on/i })).toBeVisible();
 });
 
+test('joins directly into a display-only widescreen board', async ({ page }) => {
+  await installMockBackend(page);
+  await page.goto('/');
+  await page.getByRole('button', { name: /create game night/i }).click();
+  await page.getByRole('button', { name: /leave board/i }).click();
+  await page.getByLabel(/6-digit join code/i).fill('482731');
+  await page.getByRole('button', { name: 'Join display-only' }).click();
+
+  await expect(page.getByText('Display-only view')).toBeVisible();
+  await expect(page.locator('.game-night-page')).toHaveClass(/wide-screen-mode/);
+  await expect(page.getByRole('button', { name: 'Leave board' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: /add 100 points/i })).toHaveCount(0);
+});
+
+test('host can open a separate read-only display without restoring host access there', async ({
+  page,
+}) => {
+  await installMockBackend(page);
+  await page.goto('/');
+  await page.getByRole('button', { name: /create game night/i }).click();
+  for (const name of ['Alex', 'Sam']) {
+    await page.getByLabel(/player name/i).fill(name);
+    await page.getByRole('button', { name: /add player/i }).click();
+  }
+  await page.getByRole('button', { name: /start game night/i }).click();
+  const playerCard = page.locator('.challenge-card').filter({
+    has: page.getByRole('heading', { name: "Alex's challenge" }),
+  });
+  await playerCard.getByRole('button', { name: 'Draw a challenge' }).click();
+
+  const displayPagePromise = page.waitForEvent('popup');
+  await page.getByRole('link', { name: 'Open display-only board' }).click();
+  const displayPage = await displayPagePromise;
+
+  await expect(displayPage.getByText('Display-only view')).toBeVisible();
+  await expect(displayPage.locator('.game-night-page')).toHaveClass(/wide-screen-mode/);
+  await expect(displayPage.getByRole('heading', { name: 'Current standings' })).toBeVisible();
+  await expect(displayPage.getByRole('heading', { name: 'No-HUD Run' })).toBeVisible();
+  await expect(displayPage.getByRole('timer')).toBeVisible();
+  await expect(displayPage.getByRole('button', { name: 'Leave board' })).toHaveCount(0);
+  await expect(displayPage.getByRole('button', { name: 'End game night' })).toHaveCount(0);
+  await expect(displayPage.getByRole('button', { name: /add 100 points/i })).toHaveCount(0);
+  await expect(displayPage.getByRole('button', { name: 'Draw a challenge' })).toHaveCount(0);
+  await expect(displayPage.getByRole('button', { name: 'Start' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'End game night' })).toBeVisible();
+});
+
 test('host privileges reconnect after a reload using the saved session', async ({ page }) => {
   await installMockBackend(page);
   await page.goto('/');

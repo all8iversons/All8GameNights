@@ -40,6 +40,21 @@ export const gameNightApi = {
       },
     ),
 
+  renameParticipant: (
+    spectatorCode: string,
+    hostCapability: string,
+    participantId: string,
+    displayName: string,
+  ) =>
+    apiRequest<{ participant: Participant }>(
+      `game-nights/${spectatorCode}/participants/${participantId}/rename`,
+      {
+        method: 'POST',
+        hostCapability,
+        body: { displayName },
+      },
+    ),
+
   challengeCatalog: (spectatorCode: string, hostCapability: string) =>
     apiRequest<{ challenges: Challenge[] }>(`game-nights/${spectatorCode}/challenges`, {
       hostCapability,
@@ -179,6 +194,16 @@ export const gameNightApi = {
         method: 'POST',
         hostCapability,
         body: { action, durationSeconds },
+      },
+    ),
+
+  undoFinishChallenge: (spectatorCode: string, hostCapability: string, roundId: string) =>
+    apiRequest<{ challengeRound: ChallengeRound }>(
+      `game-nights/${spectatorCode}/challenge-rounds/${roundId}/undo-finish`,
+      {
+        method: 'POST',
+        hostCapability,
+        body: {},
       },
     ),
 

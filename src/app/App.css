@@ -151,6 +151,19 @@ h2 {
   border-radius: 12px;
   background: var(--panel-soft);
 }
+.player-management-actions,
+.challenge-finished {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.player-rename-form {
+  width: 100%;
+}
+.player-rename-form .field {
+  min-width: 0;
+}
 .challenge-catalog-controls summary {
   cursor: pointer;
   font-weight: 700;
@@ -314,7 +327,7 @@ h2 {
   gap: 14px;
 }
 .challenge-team {
-  margin: -8px 0 0;
+  margin: 2px 0 0;
 }
 .challenge-content {
   display: grid;

@@ -23,7 +23,9 @@ interface ChallengePanelProps {
   tradeBlockedByTimer: boolean;
   tradeBusy: boolean;
   timerBusy: boolean;
+  undoBusy: boolean;
   onDraw: () => void;
+  onUndoFinish: () => void;
   onTrade: (teammateId: string) => void;
   onTimerAction: (
     action: 'start' | 'pause' | 'resume' | 'reset' | 'finish',
@@ -47,7 +49,9 @@ export function ChallengePanel({
   tradeBlockedByTimer,
   tradeBusy,
   timerBusy,
+  undoBusy,
   onDraw,
+  onUndoFinish,
   onTrade,
   onTimerAction,
 }: ChallengePanelProps) {
@@ -74,7 +78,20 @@ export function ChallengePanel({
           <div>
             <h3>{currentRound.challenge.name}</h3>
             <p className="muted">{currentRound.challenge.instructions}</p>
-            {currentRound.finishedAt && <p className="success">Challenge finished</p>}
+            {currentRound.finishedAt && (
+              <div className="challenge-finished">
+                <p className="success">Challenge finished</p>
+                {canControl && !displayOnly && (
+                  <button
+                    className="button secondary small"
+                    onClick={onUndoFinish}
+                    disabled={undoBusy}
+                  >
+                    {undoBusy ? 'Undoing…' : 'Undo finish'}
+                  </button>
+                )}
+              </div>
+            )}
           </div>
           {!currentRound.finishedAt && (
             <ChallengeTimer

@@ -5,6 +5,69 @@ import { integrationEnvironment } from './setup';
 describe.skipIf(!integrationEnvironment.url || !integrationEnvironment.publishableKey)(
   'game-night functions',
   () => {
+    it('lets the host rename an active player without renaming another player', async () => {
+      const { hostCapability, spectatorCode } = await createActiveGame();
+      const path = `game-nights/${spectatorCode}`;
+      const snapshot = await invoke<{
+        gameNight: { participants: Array<{ id: string; displayName: string }> };
+      }>(path);
+      const [first, second] = snapshot.body.gameNight.participants;
+
+      const renamed = await invoke<{ participant: { id: string; displayName: string } }>(
+        `${path}/participants/${first.id}/rename`,
+        {
+          method: 'POST',
+          hostCapability,
+          body: { displayName: '  New Player Name  ' },
+        },
+      );
+      expect(renamed.status).toBe(200);
+      expect(renamed.body.participant.displayName).toBe('New Player Name');
+
+      const duplicate = await invoke<{ error: { code: string } }>(
+        `${path}/participants/${first.id}/rename`,
+        {
+          method: 'POST',
+          hostCapability,
+          body: { displayName: second.displayName },
+        },
+      );
+      expect(duplicate.status).toBe(409);
+      expect(duplicate.body.error.code).toBe('DUPLICATE_PARTICIPANT');
+
+      const unauthorized = await invoke(
+        `${path}/participants/${first.id}/rename`,
+        { method: 'POST', body: { displayName: 'Unauthorized Rename' } },
+      );
+      expect(unauthorized.status).toBe(401);
+
+      const updated = await invoke<{
+        gameNight: { participants: Array<{ id: string; displayName: string }> };
+      }>(path);
+      expect(updated.body.gameNight.participants).toContainEqual({
+        ...first,
+        displayName: 'New Player Name',
+      });
+      expect(
+        (
+          await invoke(`${path}/complete`, {
+            method: 'POST',
+            hostCapability,
+            body: {},
+          })
+        ).status,
+      ).toBe(200);
+      const completedRename = await invoke(
+        `${path}/participants/${first.id}/rename`,
+        {
+          method: 'POST',
+          hostCapability,
+          body: { displayName: 'After Completion' },
+        },
+      );
+      expect(completedRename.status).toBe(409);
+    });
+
     it('allows only the host recovery key to restore host access', async () => {
       const { hostCapability, spectatorCode } = await createActiveGame();
       const path = `game-nights/${spectatorCode}/host-session`;

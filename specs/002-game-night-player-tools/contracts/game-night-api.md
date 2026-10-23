@@ -28,6 +28,20 @@ Reject completed nights and invalid/duplicate names.
 
 Host authorization required. Request body is `{}`. On success, return `200`: `{ "removed": true }`. Removal is allowed during setup and active play, and rejected after completion. The operation soft-removes the participant, clears their team assignment, finishes and stops any unfinished challenge timer, and preserves score and challenge-round history. Removed participants are omitted from active-roster results and cannot receive further score or challenge mutations. A later player may reuse the removed participant's display name.
 
+## Rename a participant
+
+`POST /functions/v1/game-nights/{spectatorCode}/participants/{participantId}/rename`
+
+Host authorization required. Request:
+
+```json
+{ "displayName": "New player name" }
+```
+
+Response `200`: `{ "participant": { "id": "uuid", "displayName": "New player name", "score": 0, "teamId": null } }`
+
+Allowed only during setup or active play. The name is trimmed and must contain 1-40 characters and be unique without case sensitivity among active participants in that game night. Duplicate names return `409 DUPLICATE_PARTICIPANT`; missing or removed participants return `404 NOT_FOUND`; completed game nights return `409 NIGHT_COMPLETED`. This changes only the current game-night participant record.
+
 ## Manage the shared challenge catalog
 
 All catalog operations require host authorization. Challenges are shared across all game nights.
@@ -78,6 +92,12 @@ Response `201` contains the unique challenge round with assigned player ID, chal
 `POST /functions/v1/game-nights/{spectatorCode}/challenge-rounds/{roundId}/timer`
 
 Host authorization required. Supported actions: `start`, `pause`, `resume`, `reset`, and `finish`. `start` requires a positive whole-second `durationSeconds`; other actions do not. Each operation changes only the referenced player's round. `finish` stops an active timer and marks the round finished, allowing a later draw for that player. `reset` does not finish a round. Reject invalid transitions with `409`.
+
+## Undo a challenge finish
+
+`POST /functions/v1/game-nights/{spectatorCode}/challenge-rounds/{roundId}/undo-finish`
+
+Host authorization required. Request body is `{}`. Allowed only during active play. Response `200` returns the reopened challenge round. The round must be the participant's most recently selected round and the participant must have no unfinished round. On success, the same row remains in history with `finishedAt: null`, `timerStatus: "ready"`, and no deadline or paused time. Older rounds, unfinished rounds, removed participants, and completed game nights are rejected without changing state (`409 INVALID_STATE_TRANSITION`, or `404 NOT_FOUND` for a missing round/participant).
 
 ## Trade unfinished challenges with a teammate
 

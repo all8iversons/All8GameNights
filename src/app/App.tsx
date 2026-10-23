@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ApiRequestError } from '../lib/api-client';
 import { clearHostSession, loadHostSession, saveHostSession } from '../lib/host-session';
 import { LoadingState } from '../components/Feedback';
@@ -10,16 +10,26 @@ import { LeaderboardPage } from '../features/history/LeaderboardPage';
 type Page = 'home' | 'leaderboard' | 'game';
 
 export function App() {
-  const [page, setPage] = useState<Page>('home');
-  const [spectatorCode, setSpectatorCode] = useState<string | null>(null);
+  const displayCodeAtLoad = useRef(new URLSearchParams(window.location.search).get('display'));
+  const [page, setPage] = useState<Page>(() =>
+    displayCodeAtLoad.current ? 'game' : 'home',
+  );
+  const [spectatorCode, setSpectatorCode] = useState<string | null>(
+    () => displayCodeAtLoad.current,
+  );
   const [hostCapability, setHostCapability] = useState<string | null>(null);
+  const [displayOnly, setDisplayOnly] = useState(() => Boolean(displayCodeAtLoad.current));
   const [restoringHostSession, setRestoringHostSession] = useState(() =>
-    Boolean(loadHostSession()),
+    !displayCodeAtLoad.current && Boolean(loadHostSession()),
   );
   const [homeError, setHomeError] = useState('');
   const [sessionWarning, setSessionWarning] = useState('');
 
   useEffect(() => {
+    if (displayCodeAtLoad.current) {
+      setRestoringHostSession(false);
+      return;
+    }
     const savedSession = loadHostSession();
     if (!savedSession) {
       setRestoringHostSession(false);
@@ -64,35 +74,38 @@ export function App() {
     );
     setSpectatorCode(code);
     setHostCapability(capability);
+    setDisplayOnly(false);
     setPage('game');
   }
 
   return (
     <div className="site-shell">
-      <header className="topbar">
-        <button className="brand" onClick={() => setPage(spectatorCode ? 'game' : 'home')}>
-          <span className="brand-mark" aria-hidden="true">
-            ★
-          </span>
-          <span>
-            Game Night <strong>Showdown</strong>
-          </span>
-        </button>
-        <nav aria-label="Main navigation">
-          <button
-            className={page === 'home' || page === 'game' ? 'nav-link active' : 'nav-link'}
-            onClick={() => setPage(spectatorCode ? 'game' : 'home')}
-          >
-            Play
+      {!displayOnly && (
+        <header className="topbar">
+          <button className="brand" onClick={() => setPage(spectatorCode ? 'game' : 'home')}>
+            <span className="brand-mark" aria-hidden="true">
+              ★
+            </span>
+            <span>
+              Game Night <strong>Showdown</strong>
+            </span>
           </button>
-          <button
-            className={page === 'leaderboard' ? 'nav-link active' : 'nav-link'}
-            onClick={() => setPage('leaderboard')}
-          >
-            Hall of Fame
-          </button>
-        </nav>
-      </header>
+          <nav aria-label="Main navigation">
+            <button
+              className={page === 'home' || page === 'game' ? 'nav-link active' : 'nav-link'}
+              onClick={() => setPage(spectatorCode ? 'game' : 'home')}
+            >
+              Play
+            </button>
+            <button
+              className={page === 'leaderboard' ? 'nav-link active' : 'nav-link'}
+              onClick={() => setPage('leaderboard')}
+            >
+              Hall of Fame
+            </button>
+          </nav>
+        </header>
+      )}
 
       <main>
         {restoringHostSession && <LoadingState message="Restoring host session…" />}
@@ -100,11 +113,12 @@ export function App() {
           <HostSetup
             initialError={homeError}
             onCreated={enterHostSession}
-            onJoin={(code) => {
-              clearHostSession();
+            onJoin={(code, display) => {
+              if (!display) clearHostSession();
               setSessionWarning('');
               setSpectatorCode(code);
               setHostCapability(null);
+              setDisplayOnly(display);
               setPage('game');
             }}
             onReconnect={enterHostSession}
@@ -114,12 +128,17 @@ export function App() {
           <GameNightPage
             spectatorCode={spectatorCode}
             hostCapability={hostCapability}
+            displayOnly={displayOnly}
             sessionWarning={sessionWarning}
             onLeave={() => {
-              clearHostSession();
+              if (!displayOnly) clearHostSession();
               setSpectatorCode(null);
               setHostCapability(null);
+              setDisplayOnly(false);
               setSessionWarning('');
+              if (displayOnly) {
+                window.history.replaceState({}, '', window.location.pathname);
+              }
               setPage('home');
             }}
           />

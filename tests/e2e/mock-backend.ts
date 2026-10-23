@@ -67,7 +67,7 @@ export async function installMockBackend(page: Page) {
   const hostCapability = 'a'.repeat(64);
   const completedTrades = new Map<string, string>();
 
-  await page.route('http://127.0.0.1:54321/functions/v1/**', async (route: Route) => {
+  await page.context().route('http://127.0.0.1:54321/functions/v1/**', async (route: Route) => {
     const request = route.request();
     const url = new URL(request.url());
     const operationPath = url.pathname.replace('/functions/v1/', '');
@@ -183,6 +183,26 @@ export async function installMockBackend(page: Page) {
           .reduce((total, player) => total + player.score, 0);
       }
       return send({ removed: true });
+    }
+    if (method === 'POST' && segments[2] === 'participants' && segments[4] === 'rename') {
+      const participant = gameNight.participants.find(({ id }) => id === segments[3]);
+      if (!participant)
+        return send({ error: { code: 'NOT_FOUND', message: 'Player not found' } }, 404);
+      const { displayName } = request.postDataJSON() as { displayName: string };
+      if (
+        gameNight.participants.some(
+          (other) =>
+            other.id !== participant.id &&
+            other.displayName.toLocaleLowerCase() === displayName.trim().toLocaleLowerCase(),
+        )
+      ) {
+        return send(
+          { error: { code: 'DUPLICATE_PARTICIPANT', message: 'Player name already exists' } },
+          409,
+        );
+      }
+      participant.displayName = displayName.trim();
+      return send({ participant });
     }
 
     if (method === 'POST' && segments[2] === 'challenges' && segments.length === 3) {
@@ -456,6 +476,39 @@ export async function installMockBackend(page: Page) {
         round.deadlineAt = null;
         round.pausedRemainingSeconds = null;
       }
+      return send({ challengeRound: round });
+    }
+    if (
+      method === 'POST' &&
+      segments[2] === 'challenge-rounds' &&
+      segments[4] === 'undo-finish'
+    ) {
+      const round = gameNight.challengeRounds.find(({ id }) => id === segments[3]);
+      if (!round)
+        return send({ error: { code: 'NOT_FOUND', message: 'Challenge round not found' } }, 404);
+      const participantRounds = gameNight.challengeRounds
+        .filter(({ participantId }) => participantId === round.participantId)
+        .sort((left, right) => left.selectedAt.localeCompare(right.selectedAt) || left.id.localeCompare(right.id));
+      const latestRound = participantRounds.at(-1);
+      if (
+        !round.finishedAt ||
+        latestRound?.id !== round.id ||
+        participantRounds.some(({ finishedAt }) => !finishedAt)
+      ) {
+        return send(
+          {
+            error: {
+              code: 'INVALID_STATE_TRANSITION',
+              message: 'Only the most recently finished challenge can be reopened.',
+            },
+          },
+          409,
+        );
+      }
+      round.finishedAt = null;
+      round.timerStatus = 'ready';
+      round.deadlineAt = null;
+      round.pausedRemainingSeconds = null;
       return send({ challengeRound: round });
     }
 

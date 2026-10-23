@@ -151,6 +151,43 @@ As a host, I want a compact wide-screen board, so I can monitor a large roster a
 1. **Given** a host opens wide-screen mode on a desktop display, **When** up to 20 players are in the roster, **Then** the board uses compact responsive columns and keeps each player's score line beside their player card.
 2. **Given** a host exits wide-screen mode, **When** the regular board is shown, **Then** its existing layout remains available.
 
+### User Story 11 - Undo the latest challenge finish (Priority: P2)
+
+As a host, I want to undo finishing a player's latest challenge, so an accidental finish can be corrected without losing its round history.
+
+**Independent Test**: Finish a player's latest round and undo it; verify the same round remains assigned, becomes unfinished with a ready timer, and cannot be undone if it is older than another round or another round is unfinished.
+
+**Acceptance Scenarios**:
+
+1. **Given** a player's most recently selected challenge is finished and they have no unfinished round, **When** the host undoes the finish, **Then** that same round remains in history, becomes unfinished, and its timer returns to ready with no running deadline.
+2. **Given** a later challenge exists or the player already has an unfinished challenge, **When** the host tries to undo an older finish, **Then** the operation is rejected and all rounds remain unchanged.
+3. **Given** the game night is completed, **When** the host attempts to undo a finish, **Then** the operation is rejected.
+
+### User Story 12 - Rename a player in the current game (Priority: P2)
+
+As a host, I want to rename a participant in the current game night, so the board can reflect a correction or preferred display name without changing unrelated game history.
+
+**Independent Test**: Rename a current participant and verify the live snapshot updates; verify duplicate names, unauthorized requests, and completed game nights are rejected.
+
+**Acceptance Scenarios**:
+
+1. **Given** a setup or active game night, **When** the host saves a valid new name, **Then** only that game-night participant is renamed and the live board reflects it.
+2. **Given** the new name is blank, too long, or already used by another active participant, **When** the host saves it, **Then** the request fails without changing the participant.
+3. **Given** a viewer or a completed game night, **When** a rename is requested, **Then** the request is rejected.
+
+### User Story 13 - Open a separate display-only board (Priority: P2)
+
+As a host, I want to open or share a display-only game board, so a separate monitor can show the live widescreen view without exposing host or score controls.
+
+**Independent Test**: Open the host-provided display link in a second browser tab with a saved host session and verify the tab loads the live widescreen board without recovering host privileges or rendering mutation controls.
+
+**Acceptance Scenarios**:
+
+1. **Given** a host is viewing a game night, **When** they open the display-only board link, **Then** the separate page loads that game night directly in widescreen mode.
+2. **Given** a viewer enters a join code, **When** they choose **Join display-only**, **Then** the board opens directly in widescreen mode.
+3. **Given** a display-only URL is opened in a browser with a saved host session, **When** the board loads, **Then** it does not restore host privileges or expose host, scoring, challenge, or timer controls.
+4. **Given** the game state changes, **When** the display-only board receives live updates, **Then** standings, challenges, and timer states update without user interaction.
+
 ### Edge Cases
 
 - Two hosts try to add players with the same name at nearly the same time; only one succeeds and the other receives a duplicate-name message.
@@ -165,6 +202,10 @@ As a host, I want a compact wide-screen board, so I can monitor a large roster a
 - A player submits a score change while the host also changes that player's score; the final value reflects both accepted changes without losing either.
 - A client reconnects after a score, team, or round update; it reloads the authoritative current state.
 - A score submission uses the spectator code; as chosen for casual play, anyone with that code may submit under any player's name.
+- An older finished challenge is not eligible for undo when a later round exists, even if that later round is also finished.
+- Undoing the most recent finish is rejected if any unfinished challenge already exists for that participant.
+- Renaming a participant does not modify a similarly named player in another game night or previously completed game records.
+- Opening the display-only link in a browser that also has host credentials stored must not restore or display those host privileges.
 
 ## Requirements _(mandatory)_
 
@@ -201,6 +242,9 @@ As a host, I want a compact wide-screen board, so I can monitor a large roster a
 - **FR-029**: Wide-screen mode MUST be a read-only display for public viewing: it MUST hide score-adjustment, challenge issue/trade, and timer start/pause/resume/reset/finish controls while continuing to show live scores, challenges, and timer state.
 - **FR-030**: Wide-screen mode MUST hide the full-deck informational message and the ready-state "Ready when you are" timer message to reduce visual clutter; active, paused, and expired timer states remain visible.
 - **FR-031**: In wide-screen mode, each player's score MUST appear in the upper-right corner of their challenge card, and the "Bonus round" label MUST be omitted.
+- **FR-032**: During an active game, the host MUST be able to undo the finish of a player's most recently selected challenge only when that player has no unfinished challenge; the round MUST remain in history and return to unfinished `ready` timer state.
+- **FR-033**: The host MUST be able to rename a participant in setup or active play; names MUST be trimmed, contain 1-40 characters, and remain unique among active participants in that game night. Renaming MUST affect only the current game-night participant.
+- **FR-034**: A viewer MUST be able to join directly into a display-only widescreen board using the join code or a host-provided display link. This view MUST NOT restore host credentials from browser storage or expose score, challenge, timer, or game-management controls.
 
 ### Key Entities
 
@@ -229,6 +273,9 @@ As a host, I want a compact wide-screen board, so I can monitor a large roster a
 - **SC-013**: In wide-screen mode, score changes, challenge issue/trade, and timer control buttons are absent; timer displays remain visible at 30px or smaller, and the normal host controls return when wide-screen mode is exited.
 - **SC-014**: Wide-screen mode contains no full-deck or ready-state timer message, while those messages return in the regular board view.
 - **SC-015**: Every wide-screen player card displays that player's score in its top-right heading area and does not display the "Bonus round" label.
+- **SC-016**: Undoing the latest eligible challenge finish restores the same round to unfinished `ready` state without deleting its history, while attempts against older rounds or a participant with another unfinished round are rejected without mutation.
+- **SC-017**: A valid host rename updates the current game's participant snapshot; duplicate, unauthorized, invalid, and completed-game rename attempts leave saved data unchanged.
+- **SC-018**: A display-only board opens directly in widescreen mode, receives live updates, and exposes no mutation controls, including when host credentials are stored in the same browser.
 
 ## Assumptions
 

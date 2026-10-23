@@ -44,6 +44,7 @@ Supabase self-hosting is community-supported. The operator is responsible for se
 4. Open `http://<UNRAID-LAN-IP>:<APP_HTTP_PORT>` from another device on the LAN.
 5. Start a game night, add at least two players, update a score, and open the spectator view on another device. Confirm live updates work. Complete a game night and confirm the leaderboard records the result.
 6. The host session is restored after a reload in the same browser tab. To reconnect from another device, use the room code and the private host recovery key revealed on the host board; do not share that key with spectators.
+7. While a game is active, use **Open display-only board** on the host board to open a widescreen-only tab, or share that display link with the monitor's browser. The display URL loads live standings, challenges, and timers without restoring host privileges or showing game controls. Viewers can also enter the room code and choose **Join display-only**.
 
 This baseline is LAN-only and does not require public internet access. If you later add a reverse proxy, configure HTTPS, the exact application origin, and WebSocket forwarding for Supabase Realtime. Do not expose Studio or internal service ports.
 

@@ -29,6 +29,9 @@ Open the Vite URL printed in the terminal, normally `http://localhost:5173`. The
 10. Share the six-digit join code with a spectator and verify the board opens. Submit a score change for a player; verify individual standings and the player's team total update. Confirm the casual shared-code warning is visible. Invalid join-code attempts are limited to 10 per IP per 15 minutes.
 11. Attempt score, roster, team, timer, draw, and trade changes after completing the game; verify each is rejected and the completed result remains unchanged.
 12. Reload or reconnect viewers and verify the snapshot preserves active players, team assignments, scores, round assignments, and timer state.
+13. Finish a player's latest challenge, choose **Undo finish**, and verify the same challenge returns with a ready, stopped timer. Finish it, draw a later challenge, and verify the older challenge cannot be reopened; also verify undo is blocked while the player has any unfinished challenge.
+14. Rename a player during setup or active play and verify the board updates. Try a duplicate name, a blank name, an unauthorized request, and a rename after game completion; each must be rejected without changing the saved participant.
+15. Open the host's **Open display-only board** link in a second tab or monitor, then verify it opens in widescreen mode, follows live updates, and has no host or score controls. Also leave the board, enter the room code, select **Join display-only**, and verify the same read-only layout. If the browser has a saved host session, confirm the display tab does not restore it.
 
 Run focused automated checks:
 

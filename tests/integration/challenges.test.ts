@@ -5,6 +5,72 @@ import { integrationEnvironment } from './setup';
 describe.skipIf(!integrationEnvironment.url || !integrationEnvironment.publishableKey)(
   'challenge functions',
   () => {
+    it('only reopens the most recently finished challenge and keeps its timer ready', async () => {
+      const { hostCapability, spectatorCode } = await createActiveGame();
+      const basePath = `game-nights/${spectatorCode}`;
+      const snapshot = await invoke<{
+        gameNight: { participants: Array<{ id: string }> };
+      }>(basePath);
+      const participantId = snapshot.body.gameNight.participants[0].id;
+      const draw = async () =>
+        invoke<{ challengeRound: { id: string } }>(`${basePath}/challenge-draws`, {
+          method: 'POST',
+          hostCapability,
+          body: { participantId, idempotencyKey: crypto.randomUUID() },
+        });
+      const finish = async (roundId: string) =>
+        invoke(`${basePath}/challenge-rounds/${roundId}/timer`, {
+          method: 'POST',
+          hostCapability,
+          body: { action: 'finish' },
+        });
+      const first = await draw();
+      expect(first.status).toBe(201);
+      expect((await finish(first.body.challengeRound.id)).status).toBe(200);
+      const second = await draw();
+      expect(second.status).toBe(201);
+      expect((await finish(second.body.challengeRound.id)).status).toBe(200);
+
+      const olderUndo = await invoke(
+        `${basePath}/challenge-rounds/${first.body.challengeRound.id}/undo-finish`,
+        { method: 'POST', hostCapability, body: {} },
+      );
+      expect(olderUndo.status).toBe(409);
+
+      const latestUndo = await invoke<{
+        challengeRound: { finishedAt: string | null; timerStatus: string };
+      }>(`${basePath}/challenge-rounds/${second.body.challengeRound.id}/undo-finish`, {
+        method: 'POST',
+        hostCapability,
+        body: {},
+      });
+      expect(latestUndo.status).toBe(200);
+      expect(latestUndo.body.challengeRound).toMatchObject({
+        finishedAt: null,
+        timerStatus: 'ready',
+      });
+      const undoWithOpenRound = await invoke(
+        `${basePath}/challenge-rounds/${first.body.challengeRound.id}/undo-finish`,
+        { method: 'POST', hostCapability, body: {} },
+      );
+      expect(undoWithOpenRound.status).toBe(409);
+      const updated = await invoke<{
+        gameNight: {
+          challengeRounds: Array<{ id: string; finishedAt: string | null }>;
+        };
+      }>(basePath);
+      expect(
+        updated.body.gameNight.challengeRounds.find(
+          ({ id }) => id === first.body.challengeRound.id,
+        )?.finishedAt,
+      ).not.toBeNull();
+      expect(
+        updated.body.gameNight.challengeRounds.find(
+          ({ id }) => id === second.body.challengeRound.id,
+        ),
+      ).toMatchObject({ finishedAt: null });
+    });
+
     it('lets a host issue a replacement challenge and preserves the stopped round', async () => {
       const { hostCapability, spectatorCode } = await createActiveGame();
       const path = `game-nights/${spectatorCode}`;

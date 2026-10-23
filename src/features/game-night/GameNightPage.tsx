@@ -12,6 +12,7 @@ import { deriveWinners } from '../history/leaderboard-utils';
 interface GameNightPageProps {
   spectatorCode: string;
   hostCapability: string | null;
+  displayOnly?: boolean;
   sessionWarning?: string;
   onLeave: () => void;
 }
@@ -19,13 +20,15 @@ interface GameNightPageProps {
 export function GameNightPage({
   spectatorCode,
   hostCapability,
+  displayOnly = false,
   sessionWarning = '',
   onLeave,
 }: GameNightPageProps) {
   const { gameNight, error, loading, refresh, setError, realtimeConnected } =
     useLiveGameNight(spectatorCode);
   const [busyAction, setBusyAction] = useState('');
-  const [wideScreen, setWideScreen] = useState(false);
+  const [wideScreen, setWideScreen] = useState(displayOnly);
+  const showWideScreen = displayOnly || wideScreen;
   const isHost = Boolean(hostCapability);
   const exhausted = Boolean(gameNight && gameNight.unusedChallengeCount === 0);
 
@@ -85,6 +88,20 @@ export function GameNightPage({
     }
   }
 
+  async function undoFinishChallenge(roundId: string) {
+    if (!hostCapability) return;
+    setBusyAction(`undo-finish:${roundId}`);
+    try {
+      await gameNightApi.undoFinishChallenge(spectatorCode, hostCapability, roundId);
+      setError('');
+      await refresh();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Could not reopen the challenge.');
+    } finally {
+      setBusyAction('');
+    }
+  }
+
   async function completeGame() {
     if (!hostCapability || !window.confirm('End this game night and save the final scores?'))
       return;
@@ -115,11 +132,13 @@ export function GameNightPage({
   }
 
   return (
-    <div className={wideScreen ? 'game-night-page wide-screen-mode' : 'game-night-page'}>
+    <div className={showWideScreen ? 'game-night-page wide-screen-mode' : 'game-night-page'}>
       <div className="host-toolbar">
         <div>
           <div className="eyebrow">
-            {gameNight.status === 'completed'
+            {displayOnly
+              ? 'Display-only view'
+              : gameNight.status === 'completed'
               ? 'Game complete'
               : isHost
                 ? 'Host view'
@@ -128,18 +147,20 @@ export function GameNightPage({
           <h1>{gameNight.status === 'completed' ? 'Final standings' : 'Game night is on'}</h1>
         </div>
         <div className="host-toolbar-actions">
-          {isHost && (gameNight.status === 'active' || wideScreen) && (
+          {isHost && !displayOnly && (gameNight.status === 'active' || wideScreen) && (
             <button
               className="button secondary small"
-              aria-pressed={wideScreen}
+              aria-pressed={showWideScreen}
               onClick={() => setWideScreen((enabled) => !enabled)}
             >
-              {wideScreen ? 'Exit wide-screen view' : 'Wide-screen view'}
+              {showWideScreen ? 'Exit wide-screen view' : 'Wide-screen view'}
             </button>
           )}
-          <button className="button secondary small" onClick={onLeave}>
-            Leave board
-          </button>
+          {!displayOnly && (
+            <button className="button secondary small" onClick={onLeave}>
+              Leave board
+            </button>
+          )}
         </div>
       </div>
       <p className="muted" role="status" style={{ maxWidth: 1000, margin: '0 auto 14px' }}>
@@ -155,6 +176,16 @@ export function GameNightPage({
           <div>
             <p className="muted">Share this 6-digit join code with your players and viewers:</p>
             <code className="share-code">{spectatorCode}</code>
+            <p>
+              <a
+                className="button secondary small"
+                href={`${window.location.origin}${window.location.pathname}?display=${encodeURIComponent(spectatorCode)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Open display-only board
+              </a>
+            </p>
             <p className="muted">
               Host controls stay private. Anyone with the shared code can submit score changes under
               any player&apos;s name.
@@ -250,7 +281,7 @@ export function GameNightPage({
             teams={gameNight.teams}
             hostCapability={gameNight.status === 'active' ? hostCapability : null}
             canSubmitScores={gameNight.status === 'active'}
-            displayOnly={wideScreen}
+            displayOnly={showWideScreen}
             onScore={onScore}
           />
           {gameNight.status === 'active' &&
@@ -284,7 +315,7 @@ export function GameNightPage({
                   tradeCandidates.every(({ round }) => round.timerStatus === 'running'));
               return (
                 <div
-                  className={wideScreen ? 'player-round wide-player-row' : 'player-round'}
+                  className={showWideScreen ? 'player-round wide-player-row' : 'player-round'}
                   key={participant.id}
                 >
                   <ChallengePanel
@@ -295,7 +326,7 @@ export function GameNightPage({
                     score={participant.score}
                     currentRound={currentRound}
                     canControl={isHost}
-                    displayOnly={wideScreen}
+                    displayOnly={showWideScreen}
                     canDraw={isHost}
                     exhausted={exhausted}
                     catalogEmpty={gameNight.availableChallengeCount === 0}
@@ -307,7 +338,15 @@ export function GameNightPage({
                     timerBusy={
                       currentRound !== null && busyAction === `timer:${currentRound.id}`
                     }
+                    undoBusy={
+                      currentRound !== null && busyAction === `undo-finish:${currentRound.id}`
+                    }
                     onDraw={() => void drawChallenge(participant.id)}
+                    onUndoFinish={() => {
+                      if (currentRound?.finishedAt) {
+                        void undoFinishChallenge(currentRound.id);
+                      }
+                    }}
                     onTrade={(teammateId) =>
                       void tradeChallenges(participant.id, teammateId)
                     }

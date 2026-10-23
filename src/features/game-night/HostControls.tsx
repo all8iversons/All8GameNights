@@ -20,6 +20,8 @@ export function HostControls({
   onError,
 }: HostControlsProps) {
   const [displayName, setDisplayName] = useState('');
+  const [editingParticipantId, setEditingParticipantId] = useState<string | null>(null);
+  const [editedDisplayName, setEditedDisplayName] = useState('');
   const [busy, setBusy] = useState(false);
 
   async function addParticipant(event: React.FormEvent) {
@@ -68,6 +70,30 @@ export function HostControls({
     }
   }
 
+  async function renameParticipant(event: React.FormEvent, participantId: string) {
+    event.preventDefault();
+    if (!editedDisplayName.trim()) {
+      onError('Player names must contain 1 to 40 characters.');
+      return;
+    }
+    setBusy(true);
+    try {
+      await gameNightApi.renameParticipant(
+        spectatorCode,
+        hostCapability,
+        participantId,
+        editedDisplayName,
+      );
+      setEditingParticipantId(null);
+      setEditedDisplayName('');
+      await onChanged();
+    } catch (error) {
+      onError(error instanceof Error ? error.message : 'Could not rename player.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <section
       className="panel stack host-controls-panel"
@@ -102,21 +128,75 @@ export function HostControls({
         <ul className="player-management-list" aria-label="Manage players">
           {participants.map((participant) => (
             <li key={participant.id}>
-              <span>
-                {participant.displayName}
-                <span className="muted"> · {participant.score} points</span>
-              </span>
-              <button
-                className="button secondary small"
-                type="button"
-                disabled={busy}
-                aria-label={`Remove ${participant.displayName}`}
-                onClick={() =>
-                  void removeParticipant(participant.id, participant.displayName)
-                }
-              >
-                Remove
-              </button>
+              {editingParticipantId === participant.id ? (
+                <form
+                  className="form-row player-rename-form"
+                  onSubmit={(event) => void renameParticipant(event, participant.id)}
+                >
+                  <label className="sr-only" htmlFor={`rename-player-${participant.id}`}>
+                    New name for {participant.displayName}
+                  </label>
+                  <input
+                    className="field"
+                    id={`rename-player-${participant.id}`}
+                    maxLength={40}
+                    value={editedDisplayName}
+                    disabled={busy}
+                    onChange={(event) => setEditedDisplayName(event.target.value)}
+                    required
+                  />
+                  <button
+                    className="button small"
+                    type="submit"
+                    disabled={busy || !editedDisplayName.trim()}
+                  >
+                    Save name
+                  </button>
+                  <button
+                    className="button secondary small"
+                    type="button"
+                    disabled={busy}
+                    onClick={() => {
+                      setEditingParticipantId(null);
+                      setEditedDisplayName('');
+                    }}
+                  >
+                    Cancel
+                  </button>
+                </form>
+              ) : (
+                <>
+                  <span>
+                    {participant.displayName}
+                    <span className="muted"> · {participant.score} points</span>
+                  </span>
+                  <div className="player-management-actions">
+                    <button
+                      className="button secondary small"
+                      type="button"
+                      disabled={busy}
+                      aria-label={`Rename ${participant.displayName}`}
+                      onClick={() => {
+                        setEditingParticipantId(participant.id);
+                        setEditedDisplayName(participant.displayName);
+                      }}
+                    >
+                      Rename
+                    </button>
+                    <button
+                      className="button secondary small"
+                      type="button"
+                      disabled={busy}
+                      aria-label={`Remove ${participant.displayName}`}
+                      onClick={() =>
+                        void removeParticipant(participant.id, participant.displayName)
+                      }
+                    >
+                      Remove
+                    </button>
+                  </div>
+                </>
+              )}
             </li>
           ))}
         </ul>

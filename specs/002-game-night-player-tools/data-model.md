@@ -31,6 +31,7 @@ Existing player record, extended with an optional team assignment.
 - An unassigned player remains in individual standings and contributes to no team total.
 - A removed player is excluded from the active roster, standings, and future mutations. Removal stops and finishes unfinished rounds, clears team assignment, and preserves score and round history.
 - A removed player's display name may be reused by a newly added active participant; the new participant receives a distinct ID.
+- A host may rename an active participant during setup or active play. The trimmed name must be 1-40 characters and unique among active participants in that game night. The participant row is scoped to one game night; no global player identity or cross-game rename is implied.
 
 ## Team
 
@@ -60,7 +61,7 @@ Existing round record, extended with an assigned player and explicit completion 
 | `participant_id`           | UUID                           | Required player reference in the same game night      |
 | `challenge_id`             | UUID                           | Required catalog reference                            |
 | `selected_at`              | timestamp                      | Set on draw                                           |
-| `finished_at`              | timestamp, nullable            | Set when host finishes the round                      |
+| `finished_at`              | timestamp, nullable            | Set when host finishes the round; cleared by an eligible undo |
 | `timer_status`             | enum                           | `ready`, `running`, `paused`, `expired`, or `stopped` |
 | `duration_seconds`         | positive integer, nullable     | Timer duration                                        |
 | `deadline_at`              | timestamp, nullable            | Authoritative running deadline                        |
@@ -71,6 +72,7 @@ Existing round record, extended with an assigned player and explicit completion 
 - A challenge can be drawn once per game night.
 - A player can have at most one round with no `finished_at` in a game night.
 - Round finish is separate from timer reset. Finish stops any active timer and releases the player for a later challenge.
+- A host may undo only the player's most recently selected finished round, and only when that player has no unfinished round. The same history row is reopened with `finished_at` cleared and timer state reset to `ready`; older finishes, removed players, and completed game nights are not eligible.
 - A host may issue a replacement challenge after confirming. The draw operation atomically finishes the player's current round, stops and clears its timer, retains it as history, and assigns a different unused challenge. If no unused challenge remains, the operation changes nothing.
 - Timer operations apply only to the specified round; the database deadline remains authoritative.
 - Challenge assignment and finish are rejected after game completion.

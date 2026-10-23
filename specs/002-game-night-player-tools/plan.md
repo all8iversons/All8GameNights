@@ -6,7 +6,7 @@
 
 ## Summary
 
-Support mid-game roster changes, player-assigned unique challenges with independent timers, team assignments and derived team totals, balanced team randomization, host-configured team generation, six-digit join codes, casual player-submitted score changes, host player removal, shared challenge-catalog management, and a dense wide-screen board for up to 20 players. Extend the existing Supabase-backed game-night snapshot and host-authorized mutation flow; add a deliberately join-code-authorized score endpoint with clear disclosure and request validation. Keep individual scores authoritative so standings, teams, and existing historical results stay consistent.
+Support mid-game roster changes and renames, player-assigned unique challenges with independent timers and recoverable accidental finishes, team assignments and derived team totals, balanced team randomization, host-configured team generation, six-digit join codes, casual player-submitted score changes, host player removal, shared challenge-catalog management, and a dense wide-screen board for up to 20 players. Allow a separate display-only browser to open directly from a host-provided URL or a join-code form choice, without restoring saved host credentials. Extend the existing Supabase-backed game-night snapshot and host-authorized mutation flow; add a deliberately join-code-authorized score endpoint with clear disclosure and request validation. Keep individual scores authoritative so standings, teams, and existing historical results stay consistent.
 
 ## Technical Context
 
@@ -86,6 +86,8 @@ tests/
 - Keep timer state and deadlines on each challenge round. Timer requests identify the player's round, so parallel players do not overwrite each other.
 - Allow room-code holders to trade unfinished challenge assignments between same-team players; reject running timers and make retries idempotent.
 - Keep host-only mutations bearer-authorized. Player score changes use the spectator code as a shared, low-assurance capability, reject completed events and unknown participants, validate integer deltas, and apply updates atomically with idempotency.
+- Make challenge-finish undo an atomic database operation that reopens only the participant's latest finished round when no unfinished round exists; retain the same history record and reset its timer to `ready`.
+- Scope participant renaming to the current game-night row, retain the active-name uniqueness constraint, and reject renames after completion.
 - Generate new six-digit join codes with cryptographic randomness and collision retries while retaining compatibility with existing long codes. Count invalid lookups per source IP and rate-limit them; keep the separate high-entropy host capability for host operations.
 - Randomize all current players into existing teams through a single host-authorized database operation, assigning team sizes that differ by at most one.
 - Allow the host to generate a requested number of teams or set a maximum players-per-team capacity. Generate unique original space-themed names and replace the existing teams and assignments atomically, preserving individual scores.

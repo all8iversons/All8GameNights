@@ -50,6 +50,18 @@
 
 **Alternatives considered**: Hard deletion was rejected because it would destroy game history and could make consumed challenges available again.
 
+### Decision: Restrict challenge-finish undo to the latest eligible round
+
+**Rationale**: Undoing an older finish could reopen a round out of sequence or violate the one-unfinished-round-per-player invariant. A database transaction locks the game night, verifies the target is the participant's most recent round and no other round is unfinished, then clears the finish timestamp and returns the timer to `ready` without deleting history.
+
+**Alternatives considered**: Reopening any finished round or deleting and redrawing were rejected because they can reorder a player's history or consume a different challenge than the one the host intended to restore.
+
+### Decision: Rename only the participant record in the current game night
+
+**Rationale**: The app has game-night participant records rather than global player accounts. A host rename updates only that participant, is allowed during setup or active play, and remains subject to the active-name uniqueness constraint. It does not alter a person or participant record in another game night.
+
+**Alternatives considered**: Global player profiles were rejected because they would add identity management outside the requested current-game correction.
+
 ### Decision: Manage one shared challenge catalog
 
 **Rationale**: Catalog entries are shared across events. Host-authorized list, create, edit, and enable/disable operations let hosts maintain that common pool; edits immediately change details shown by existing assignments, while disabling only affects future draws.
@@ -61,6 +73,12 @@
 **Rationale**: Score lines beside compact player cards reduce vertical height while responsive columns allow a host to monitor up to 20 players on a wide display. The existing regular board remains available outside wide-screen mode.
 
 **Alternatives considered**: Increasing card density without aligning scores or splitting into columns was rejected because it does not solve the 20-player monitoring requirement.
+
+### Decision: Open the wide-screen board as an independent, read-only display
+
+**Rationale**: A direct display URL and a separate display-only join choice let a second browser or monitor load the game without depending on the host tab's local UI state. The display route deliberately bypasses stored host-session restoration and passes no host capability to the game board, while reusing the existing live snapshot and read-only wide-screen presentation.
+
+**Alternatives considered**: Requiring the host to keep wide-screen mode in the same tab was rejected because it prevents using a separate monitor. Reusing a browser's stored host capability was rejected because the public display must not expose host controls.
 
 ### Decision: Give each player at most one unfinished round
 

@@ -9,7 +9,7 @@ import {
 import { serviceClient } from '../_shared/game-night-auth.ts';
 import { getSnapshot, mapParticipant, requireHost, resolveNight } from './shared.ts';
 import { startGameNight } from './start.ts';
-import { addParticipant, removeParticipant } from './participants.ts';
+import { addParticipant, removeParticipant, renameParticipant } from './participants.ts';
 import {
   createChallenge,
   readChallengeCatalog,
@@ -20,7 +20,7 @@ import { completeGameNight } from './complete.ts';
 import { readGameNight } from './read.ts';
 import { drawChallenge } from './draw-challenge.ts';
 import { tradeChallenges } from './trade-challenges.ts';
-import { controlTimer } from './challenge-timer.ts';
+import { controlTimer, undoFinishChallenge } from './challenge-timer.ts';
 import {
   assignParticipantToTeam,
   createTeam,
@@ -113,6 +113,9 @@ async function handle(request: Request): Promise<Response> {
   if (resource === 'participants' && id && action === 'remove') {
     return removeParticipant(request, spectatorCode, id);
   }
+  if (resource === 'participants' && id && action === 'rename') {
+    return renameParticipant(request, spectatorCode, id);
+  }
   if (resource === 'start') return startGameNight(request, spectatorCode);
   if (resource === 'teams' && !id) return createTeam(request, spectatorCode);
   if (resource === 'teams' && id === 'randomize') return randomizeTeams(request, spectatorCode);
@@ -128,6 +131,9 @@ async function handle(request: Request): Promise<Response> {
   if (resource === 'challenge-trades') return tradeChallenges(request, spectatorCode);
   if (resource === 'challenge-rounds' && id && action === 'timer') {
     return controlTimer(request, spectatorCode, id);
+  }
+  if (resource === 'challenge-rounds' && id && action === 'undo-finish') {
+    return undoFinishChallenge(request, spectatorCode, id);
   }
   if (resource === 'complete') return completeGameNight(request, spectatorCode);
   throw new HttpError(404, 'NOT_FOUND', 'The requested game-night operation was not found.');

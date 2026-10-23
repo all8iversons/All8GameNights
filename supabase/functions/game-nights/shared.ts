@@ -97,7 +97,8 @@ export async function getSnapshot(
       .from('challenge_rounds')
       .select('*, challenges(id, name, instructions)')
       .eq('game_night_id', night.id)
-      .order('selected_at'),
+      .order('selected_at')
+      .order('id'),
     client.from('challenges').select('id').eq('enabled', true),
   ]);
   if (participantError) throw participantError;

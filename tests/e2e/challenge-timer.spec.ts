@@ -179,6 +179,34 @@ test('hosts can manage the shared challenge catalog and remove active players', 
   ).toBeVisible();
 });
 
+test('hosts can undo the latest challenge finish and rename a player', async ({ page }) => {
+  await installMockBackend(page);
+  await page.goto('/');
+  await page.getByRole('button', { name: /create game night/i }).click();
+  for (const name of ['Player A', 'Player B']) {
+    await page.getByLabel(/player name/i).fill(name);
+    await page.getByRole('button', { name: /add player/i }).click();
+  }
+  await page.getByRole('button', { name: /start game night/i }).click();
+  const playerA = page.locator('.challenge-card').filter({
+    has: page.getByRole('heading', { name: "Player A's challenge" }),
+  });
+  await playerA.getByRole('button', { name: 'Draw a challenge' }).click();
+  await playerA.getByRole('button', { name: /finish challenge/i }).click();
+  await expect(playerA.getByText('Challenge finished')).toBeVisible();
+  await playerA.getByRole('button', { name: 'Undo finish' }).click();
+  await expect(playerA.getByText('Challenge finished')).toHaveCount(0);
+  await expect(playerA.getByRole('button', { name: 'Start' })).toBeVisible();
+
+  await page.getByRole('button', { name: 'Rename Player A' }).click();
+  await page.getByLabel('New name for Player A').fill('Player Alpha');
+  await page.getByRole('button', { name: 'Save name' }).click();
+  await expect(
+    page.getByRole('heading', { name: "Player Alpha's challenge" }),
+  ).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Rename Player Alpha' })).toBeVisible();
+});
+
 test('host wide-screen view lays out a 20-player roster in compact columns', async ({ page }) => {
   await installMockBackend(page);
   await page.goto('/');

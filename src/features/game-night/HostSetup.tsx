@@ -5,7 +5,7 @@ import type { CreatedGameNightResponse } from '../../lib/api-types';
 
 interface HostSetupProps {
   onCreated: (spectatorCode: string, hostCapability: string) => void;
-  onJoin: (spectatorCode: string) => void;
+  onJoin: (spectatorCode: string, displayOnly: boolean) => void;
   onReconnect: (spectatorCode: string, hostCapability: string) => void;
   initialError?: string;
 }
@@ -77,13 +77,16 @@ export function HostSetup({ onCreated, onJoin, onReconnect, initialError = '' }:
           <div>
             <div className="eyebrow">Joining in?</div>
             <h2 id="join-heading">Watch the live board</h2>
-            <p className="muted">Enter the read-only code from your host to follow along.</p>
+            <p className="muted">
+              Enter the read-only code from your host to follow along on this screen or a separate
+              display.
+            </p>
           </div>
           <form
             className="form-row"
             onSubmit={(event) => {
               event.preventDefault();
-              if (validJoinCode) onJoin(normalizedJoinCode);
+              if (validJoinCode) onJoin(normalizedJoinCode, false);
             }}
           >
             <label className="sr-only" htmlFor="spectator-code">
@@ -99,9 +102,19 @@ export function HostSetup({ onCreated, onJoin, onReconnect, initialError = '' }:
               placeholder="Enter 6-digit code"
               autoComplete="off"
             />
-            <button className="button secondary" type="submit" disabled={!validJoinCode}>
-              Join
-            </button>
+            <div className="form-row">
+              <button className="button secondary" type="submit" disabled={!validJoinCode}>
+                Join
+              </button>
+              <button
+                className="button secondary"
+                type="button"
+                disabled={!validJoinCode}
+                onClick={() => onJoin(normalizedJoinCode, true)}
+              >
+                Join display-only
+              </button>
+            </div>
           </form>
         </section>
         <section className="panel stack" aria-labelledby="host-reconnect-heading">

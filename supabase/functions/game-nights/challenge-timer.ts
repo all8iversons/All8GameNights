@@ -12,6 +12,7 @@ export async function controlTimer(request: Request, spectatorCode: string, roun
       'Timers can only be changed during an active game.',
     );
   }
+
   const body = await readJson<{ action?: unknown; durationSeconds?: unknown }>(request);
   if (typeof body.action !== 'string' || !actions.has(body.action)) {
     throw new HttpError(400, 'VALIDATION_ERROR', 'Choose a supported timer action.');
@@ -46,6 +47,56 @@ export async function controlTimer(request: Request, spectatorCode: string, roun
     }
     throw error;
   }
+  const { data: withChallenge, error: fetchError } = await client
+    .from('challenge_rounds')
+    .select('*, challenges(id, name, instructions)')
+    .eq('id', round.id)
+    .single();
+  if (fetchError) throw fetchError;
+  return jsonResponse({ challengeRound: mapRound(withChallenge) });
+}
+
+export async function undoFinishChallenge(
+  request: Request,
+  spectatorCode: string,
+  roundId: string,
+) {
+  const { client, night, authorized } = await requireHost(request, spectatorCode);
+  if (authorized.status !== 'active') {
+    throw new HttpError(
+      409,
+      'INVALID_STATE_TRANSITION',
+      'A challenge finish can only be undone during an active game.',
+    );
+  }
+  const { data: round, error } = await client.rpc('undo_finish_game_night_challenge', {
+    p_game_night_id: night.id,
+    p_round_id: roundId,
+  });
+  if (error?.message.includes('ROUND_NOT_FOUND')) {
+    throw new HttpError(404, 'NOT_FOUND', 'Challenge round was not found.');
+  }
+  if (error?.message.includes('PARTICIPANT_NOT_FOUND')) {
+    throw new HttpError(404, 'NOT_FOUND', 'Player was not found.');
+  }
+  if (
+    error?.message.includes('ROUND_NOT_FINISHED') ||
+    error?.message.includes('UNDO_NOT_AVAILABLE')
+  ) {
+    throw new HttpError(
+      409,
+      'INVALID_STATE_TRANSITION',
+      'Only the player’s most recently finished challenge can be reopened, and only when they have no unfinished challenge.',
+    );
+  }
+  if (error?.message.includes('ACTIVE_NIGHT_NOT_FOUND')) {
+    throw new HttpError(
+      409,
+      'INVALID_STATE_TRANSITION',
+      'A challenge finish can only be undone during an active game.',
+    );
+  }
+  if (error) throw error;
   const { data: withChallenge, error: fetchError } = await client
     .from('challenge_rounds')
     .select('*, challenges(id, name, instructions)')
