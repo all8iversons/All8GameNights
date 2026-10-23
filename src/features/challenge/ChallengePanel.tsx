@@ -12,6 +12,7 @@ interface ChallengePanelProps {
   teamName: string | null;
   currentRound: ChallengeRound | null;
   canControl: boolean;
+  displayOnly?: boolean;
   canDraw: boolean;
   exhausted: boolean;
   catalogEmpty: boolean;
@@ -34,6 +35,7 @@ export function ChallengePanel({
   teamName,
   currentRound,
   canControl,
+  displayOnly = false,
   canDraw,
   exhausted,
   catalogEmpty,
@@ -67,7 +69,7 @@ export function ChallengePanel({
             <ChallengeTimer
               playerName={playerName}
               round={currentRound}
-              canControl={canControl}
+              canControl={canControl && !displayOnly}
               busy={timerBusy}
               embedded
               onAction={onTimerAction}
@@ -92,7 +94,7 @@ export function ChallengePanel({
           That’s the full deck—every challenge has been played tonight.
         </p>
       )}
-      {canControl && canDraw && (
+      {canControl && !displayOnly && canDraw && (
         <button
           className="button"
           onClick={() => {
@@ -118,7 +120,7 @@ export function ChallengePanel({
                 : 'Draw a challenge'}
         </button>
       )}
-      {currentRound && !currentRound.finishedAt && tradeOptions.length > 0 && (
+      {!displayOnly && currentRound && !currentRound.finishedAt && tradeOptions.length > 0 && (
         <form
           className="stack"
           onSubmit={(event) => {
@@ -149,7 +151,8 @@ export function ChallengePanel({
           </p>
         </form>
       )}
-      {currentRound &&
+      {!displayOnly &&
+        currentRound &&
         !currentRound.finishedAt &&
         tradeBlockedByTimer &&
         tradeOptions.length === 0 && (

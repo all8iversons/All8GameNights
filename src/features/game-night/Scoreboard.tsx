@@ -7,6 +7,7 @@ interface ScoreboardProps {
   teams: Team[];
   hostCapability: string | null;
   canSubmitScores: boolean;
+  displayOnly?: boolean;
   onScore: (participantId: string, delta: number) => Promise<void>;
 }
 
@@ -15,6 +16,7 @@ export function Scoreboard({
   teams,
   hostCapability,
   canSubmitScores,
+  displayOnly = false,
   onScore,
 }: ScoreboardProps) {
   const ranked = rankParticipants(participants);
@@ -63,7 +65,7 @@ export function Scoreboard({
               <span className="score-value" aria-label={`${participant.score} points`}>
                 {participant.score}
               </span>
-              {canSubmitScores && (
+              {canSubmitScores && !displayOnly && (
                 <span
                   className="score-controls"
                   aria-label={
@@ -90,7 +92,7 @@ export function Scoreboard({
           ))}
         </ol>
       )}
-      {canSubmitScores && (
+      {canSubmitScores && !displayOnly && (
         <p className="muted score-disclosure">
           Anyone with this spectator code can submit score changes under any player&apos;s name.
           Player identity is not verified.

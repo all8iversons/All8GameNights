@@ -198,6 +198,7 @@ As a host, I want a compact wide-screen board, so I can monitor a large roster a
 - **FR-026**: Disabled challenges MUST be excluded from future draws without deleting existing challenge history or making already-assigned challenges available again.
 - **FR-027**: The host MUST be able to toggle a dense wide-screen board that displays up to 20 players with score lines beside their cards in responsive columns.
 - **FR-028**: When a player has an unfinished challenge, the host MUST be asked to confirm before issuing a replacement challenge; cancelling MUST leave the current challenge and timer unchanged.
+- **FR-029**: Wide-screen mode MUST be a read-only display for public viewing: it MUST hide score-adjustment, challenge issue/trade, and timer start/pause/resume/reset/finish controls while continuing to show live scores, challenges, and timer state.
 
 ### Key Entities
 
@@ -223,6 +224,7 @@ As a host, I want a compact wide-screen board, so I can monitor a large roster a
 - **SC-010**: A host can add and edit shared challenges; an edited challenge appears with its updated details on any existing assignment, and a disabled challenge is unavailable for future draws.
 - **SC-011**: Wide-screen mode displays all 20 players in a compact, responsive multi-column layout with each score line beside its player card.
 - **SC-012**: A host can confirm replacement of a player's unfinished challenge, and the next challenge appears while the prior round remains in history with its timer stopped; cancelling confirmation leaves the current round unchanged.
+- **SC-013**: In wide-screen mode, score changes, challenge issue/trade, and timer control buttons are absent; timer displays remain visible at 30px or smaller, and the normal host controls return when wide-screen mode is exited.
 
 ## Assumptions
 

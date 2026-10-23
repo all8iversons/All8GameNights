@@ -202,6 +202,7 @@ No setup tasks.
 - [x] T048 Add integration and end-to-end coverage for replacing an unfinished challenge and preserving the stopped round in `tests/integration/challenges.test.ts` and `tests/e2e/challenge-timer.spec.ts`.
 - [x] T049 Update the atomic challenge-draw operation and host control to confirm, stop, finish, and preserve replaced rounds in `supabase/migrations/007_player_removal_and_challenge_catalog.sql` and `src/features/challenge/ChallengePanel.tsx`.
 - [x] T050 Document replacement confirmation, history retention, and no-challenges behavior in the feature spec, API contract, data model, and quickstart.
+- [x] T051 Make wide-screen mode read-only for public display, remove score/challenge/timer mutation controls, reduce timer typography, and cover visibility in `src/features/game-night/Scoreboard.tsx`, `src/features/game-night/GameNightPage.tsx`, `src/features/challenge/ChallengePanel.tsx`, `src/app/App.css`, and `tests/e2e/challenge-timer.spec.ts`.
 
 ---
 

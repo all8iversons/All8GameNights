@@ -75,8 +75,21 @@ test('teammates can trade unfinished challenges but not while a timer is running
   ).toContainText('Aurora Voyagers');
   await expect(playerA.getByRole('timer')).toBeVisible();
   await expect(playerA.getByText('Aurora Voyagers')).toBeVisible();
+  await expect(playerA.getByRole('button', { name: /issue new challenge/i })).toHaveCount(0);
+  await expect(playerA.getByLabel('Trade challenge with a teammate')).toHaveCount(0);
+  await expect(
+    playerA.getByRole('button', { name: /start|pause|resume|reset|finish challenge/i }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole('button', { name: /add 100 points|subtract 100 points/i }),
+  ).toHaveCount(0);
+  const wideTimerFontSize = await playerA.getByRole('timer').evaluate(
+    (timer) => window.getComputedStyle(timer).fontSize,
+  );
+  expect(Number.parseFloat(wideTimerFontSize)).toBeLessThanOrEqual(30);
   await page.getByRole('button', { name: 'Exit wide-screen view' }).click();
   await expect(page.locator('.game-night-page')).not.toHaveClass(/wide-screen-mode/);
+  await expect(playerA.getByRole('button', { name: 'Start' })).toBeVisible();
 
   await playerA.getByLabel('Trade challenge with a teammate').selectOption('player-2');
   await playerA.getByRole('button', { name: 'Trade challenges' }).click();

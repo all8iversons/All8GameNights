@@ -250,6 +250,7 @@ export function GameNightPage({
             teams={gameNight.teams}
             hostCapability={gameNight.status === 'active' ? hostCapability : null}
             canSubmitScores={gameNight.status === 'active'}
+            displayOnly={wideScreen}
             onScore={onScore}
           />
           {gameNight.status === 'active' &&
@@ -294,20 +295,6 @@ export function GameNightPage({
                       <strong className="wide-player-score" aria-label={`${participant.score} points`}>
                         {participant.score}
                       </strong>
-                      <span className="wide-score-controls">
-                        <button
-                          aria-label={`Subtract 100 points from ${participant.displayName}`}
-                          onClick={() => void onScore(participant.id, -100)}
-                        >
-                          −
-                        </button>
-                        <button
-                          aria-label={`Add 100 points to ${participant.displayName}`}
-                          onClick={() => void onScore(participant.id, 100)}
-                        >
-                          +
-                        </button>
-                      </span>
                     </aside>
                   )}
                   <ChallengePanel
@@ -317,6 +304,7 @@ export function GameNightPage({
                     }
                     currentRound={currentRound}
                     canControl={isHost}
+                    displayOnly={wideScreen}
                     canDraw={isHost}
                     exhausted={exhausted}
                     catalogEmpty={gameNight.availableChallengeCount === 0}
