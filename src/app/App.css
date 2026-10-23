@@ -452,25 +452,24 @@ h2 {
   display: none;
 }
 .wide-screen-mode .player-round {
-  display: grid;
-  grid-template-columns: 60px minmax(0, 1fr);
-  align-items: stretch;
-  gap: 7px;
+  display: block;
   min-width: 0;
 }
-.wide-screen-mode .wide-scoreline {
+.wide-challenge-heading {
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
+  align-items: flex-start;
+  justify-content: space-between;
   gap: 8px;
-  padding: 8px 4px;
-  background: var(--panel-soft);
-  border: 1px solid var(--line);
-  border-radius: 13px;
 }
-.wide-player-score {
-  font-size: clamp(18px, 1.5vw, 24px);
+.wide-challenge-heading > div {
+  min-width: 0;
+}
+.wide-card-score {
+  flex: none;
+  padding: 2px 8px;
+  border-radius: 8px;
+  background: var(--panel-soft);
+  font-size: clamp(16px, 1.2vw, 20px);
   overflow-wrap: anywhere;
 }
 .wide-screen-mode .challenge-card {
@@ -555,9 +554,6 @@ h2 {
   }
   .wide-screen-mode .game-layout {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-  .wide-screen-mode .player-round {
-    grid-template-columns: 52px minmax(0, 1fr);
   }
   .wide-screen-mode .scoreboard {
     grid-template-columns: 1fr;

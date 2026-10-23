@@ -287,21 +287,12 @@ export function GameNightPage({
                   className={wideScreen ? 'player-round wide-player-row' : 'player-round'}
                   key={participant.id}
                 >
-                  {wideScreen && (
-                    <aside
-                      className="wide-scoreline"
-                      aria-label={`Score for ${participant.displayName}`}
-                    >
-                      <strong className="wide-player-score" aria-label={`${participant.score} points`}>
-                        {participant.score}
-                      </strong>
-                    </aside>
-                  )}
                   <ChallengePanel
                     playerName={participant.displayName}
                     teamName={
                       gameNight.teams.find(({ id }) => id === participant.teamId)?.name ?? null
                     }
+                    score={participant.score}
                     currentRound={currentRound}
                     canControl={isHost}
                     displayOnly={wideScreen}

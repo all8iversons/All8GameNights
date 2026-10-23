@@ -75,6 +75,12 @@ test('teammates can trade unfinished challenges but not while a timer is running
   ).toContainText('Aurora Voyagers');
   await expect(playerA.getByRole('timer')).toBeVisible();
   await expect(playerA.getByText('Aurora Voyagers')).toBeVisible();
+  await expect(playerA.getByLabel('100 points')).toBeVisible();
+  await expect(playerA.getByText('Bonus round')).toHaveCount(0);
+  await expect(
+    page.getByText('That’s the full deck—every challenge has been played tonight.'),
+  ).toHaveCount(0);
+  await expect(page.getByText('Ready when you are')).toHaveCount(0);
   await expect(playerA.getByRole('button', { name: /issue new challenge/i })).toHaveCount(0);
   await expect(playerA.getByLabel('Trade challenge with a teammate')).toHaveCount(0);
   await expect(
@@ -83,6 +89,7 @@ test('teammates can trade unfinished challenges but not while a timer is running
   await expect(
     page.getByRole('button', { name: /add 100 points|subtract 100 points/i }),
   ).toHaveCount(0);
+  await expect(page.locator('.wide-scoreline')).toHaveCount(0);
   const wideTimerFontSize = await playerA.getByRole('timer').evaluate(
     (timer) => window.getComputedStyle(timer).fontSize,
   );
@@ -90,6 +97,10 @@ test('teammates can trade unfinished challenges but not while a timer is running
   await page.getByRole('button', { name: 'Exit wide-screen view' }).click();
   await expect(page.locator('.game-night-page')).not.toHaveClass(/wide-screen-mode/);
   await expect(playerA.getByRole('button', { name: 'Start' })).toBeVisible();
+  await expect(
+    page.getByText('That’s the full deck—every challenge has been played tonight.'),
+  ).toBeVisible();
+  await expect(page.getByText('Ready when you are').first()).toBeVisible();
 
   await playerA.getByLabel('Trade challenge with a teammate').selectOption('player-2');
   await playerA.getByRole('button', { name: 'Trade challenges' }).click();
@@ -180,6 +191,6 @@ test('host wide-screen view lays out a 20-player roster in compact columns', asy
   await page.getByRole('button', { name: 'Wide-screen view' }).click();
 
   await expect(page.locator('.wide-player-row')).toHaveCount(20);
-  await expect(page.locator('.wide-scoreline')).toHaveCount(20);
+  await expect(page.locator('.wide-card-score')).toHaveCount(20);
   await expect(page.getByRole('button', { name: 'Exit wide-screen view' })).toBeVisible();
 });

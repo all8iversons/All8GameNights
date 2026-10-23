@@ -10,6 +10,7 @@ interface TeammateOption {
 interface ChallengePanelProps {
   playerName: string;
   teamName: string | null;
+  score?: number;
   currentRound: ChallengeRound | null;
   canControl: boolean;
   displayOnly?: boolean;
@@ -33,6 +34,7 @@ interface ChallengePanelProps {
 export function ChallengePanel({
   playerName,
   teamName,
+  score,
   currentRound,
   canControl,
   displayOnly = false,
@@ -51,12 +53,21 @@ export function ChallengePanel({
 }: ChallengePanelProps) {
   const headingId = useId();
   const [teammateId, setTeammateId] = useState('');
+  const headingClassName = displayOnly
+    ? 'challenge-card-heading wide-challenge-heading'
+    : 'challenge-card-heading';
   return (
     <section className="panel challenge-card" aria-labelledby={headingId}>
-      <div>
-        <div className="eyebrow">Bonus round</div>
-        <h2 id={headingId}>{playerName}&apos;s challenge</h2>
-        {teamName && <p className="muted challenge-team">{teamName}</p>}
+      <div className={headingClassName}>
+        <div>
+          <h2 id={headingId}>{playerName}&apos;s challenge</h2>
+          {teamName && <p className="muted challenge-team">{teamName}</p>}
+        </div>
+        {displayOnly && score !== undefined && (
+          <strong className="wide-card-score" aria-label={`${score} points`}>
+            {score}
+          </strong>
+        )}
       </div>
       {currentRound ? (
         <div className="challenge-content">
@@ -72,6 +83,7 @@ export function ChallengePanel({
               canControl={canControl && !displayOnly}
               busy={timerBusy}
               embedded
+              hideReadyStatus={displayOnly}
               onAction={onTimerAction}
             />
           )}
@@ -89,7 +101,7 @@ export function ChallengePanel({
           No challenges are available right now.
         </p>
       )}
-      {exhausted && !catalogEmpty && (
+      {!displayOnly && exhausted && !catalogEmpty && (
         <p className="muted" role="status">
           That’s the full deck—every challenge has been played tonight.
         </p>

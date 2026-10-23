@@ -8,6 +8,7 @@ interface ChallengeTimerProps {
   canControl: boolean;
   busy: boolean;
   embedded?: boolean;
+  hideReadyStatus?: boolean;
   onAction: (
     action: 'start' | 'pause' | 'resume' | 'reset' | 'finish',
     durationSeconds?: number,
@@ -29,6 +30,7 @@ export function ChallengeTimer({
   canControl,
   busy,
   embedded = false,
+  hideReadyStatus = false,
   onAction,
 }: ChallengeTimerProps) {
   const id = useId();
@@ -61,15 +63,17 @@ export function ChallengeTimer({
       >
         {formatTime(remaining)}
       </div>
-      <p className={expired ? 'success' : 'muted'} role="status" aria-live="polite">
-        {expired
-          ? 'Time is up!'
-          : status === 'running'
-            ? 'Timer running'
-            : status === 'paused'
-              ? 'Timer paused'
-              : 'Ready when you are'}
-      </p>
+      {!(hideReadyStatus && status === 'ready') && (
+        <p className={expired ? 'success' : 'muted'} role="status" aria-live="polite">
+          {expired
+            ? 'Time is up!'
+            : status === 'running'
+              ? 'Timer running'
+              : status === 'paused'
+                ? 'Timer paused'
+                : 'Ready when you are'}
+        </p>
+      )}
       {canControl && (
         <div className="timer-controls">
           {status !== 'running' && status !== 'paused' && (

@@ -203,6 +203,8 @@ No setup tasks.
 - [x] T049 Update the atomic challenge-draw operation and host control to confirm, stop, finish, and preserve replaced rounds in `supabase/migrations/007_player_removal_and_challenge_catalog.sql` and `src/features/challenge/ChallengePanel.tsx`.
 - [x] T050 Document replacement confirmation, history retention, and no-challenges behavior in the feature spec, API contract, data model, and quickstart.
 - [x] T051 Make wide-screen mode read-only for public display, remove score/challenge/timer mutation controls, reduce timer typography, and cover visibility in `src/features/game-night/Scoreboard.tsx`, `src/features/game-night/GameNightPage.tsx`, `src/features/challenge/ChallengePanel.tsx`, `src/app/App.css`, and `tests/e2e/challenge-timer.spec.ts`.
+- [x] T052 Hide full-deck and ready-state notices only in wide-screen mode, retain them in the regular board, and cover both layouts in `src/features/challenge/ChallengePanel.tsx`, `src/features/timer/ChallengeTimer.tsx`, and `tests/e2e/challenge-timer.spec.ts`.
+- [x] T053 Move each wide-screen score into the upper-right corner of its player card, remove the "Bonus round" label, and verify the 20-card layout in `src/features/game-night/GameNightPage.tsx`, `src/features/challenge/ChallengePanel.tsx`, `src/app/App.css`, and `tests/e2e/challenge-timer.spec.ts`.
 
 ---
 
