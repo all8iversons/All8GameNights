@@ -1,0 +1,10 @@
+.env
+.env.*
+!.env.example
+upstream/
+backups/
+*.sql
+*.dump
+*.tar
+*.tar.gz
+*.tgz

@@ -1,0 +1,46 @@
+services:
+  functions:
+    volumes:
+      - type: bind
+        source: ${GAME_NIGHT_FUNCTIONS_PATH:?Set GAME_NIGHT_FUNCTIONS_PATH to the repository's Supabase functions directory}/game-nights
+        target: /home/deno/functions/game-nights
+        read_only: true
+      - type: bind
+        source: ${GAME_NIGHT_FUNCTIONS_PATH:?Set GAME_NIGHT_FUNCTIONS_PATH to the repository's Supabase functions directory}/leaderboard
+        target: /home/deno/functions/leaderboard
+        read_only: true
+      - type: bind
+        source: ${GAME_NIGHT_FUNCTIONS_PATH:?Set GAME_NIGHT_FUNCTIONS_PATH to the repository's Supabase functions directory}/_shared
+        target: /home/deno/functions/_shared
+        read_only: true
+    environment:
+      ALLOWED_ORIGIN: ${ALLOWED_ORIGIN:?Set ALLOWED_ORIGIN to the frontend origin}
+
+  db:
+    volumes:
+      - type: bind
+        source: ${APPDATA_ROOT:?Set APPDATA_ROOT to a dedicated Unraid appdata directory}/postgres
+        target: /var/lib/postgresql/data
+
+  storage:
+    volumes:
+      - type: bind
+        source: ${APPDATA_ROOT:?Set APPDATA_ROOT to a dedicated Unraid appdata directory}/storage
+        target: /var/lib/storage
+
+  imgproxy:
+    volumes:
+      - type: bind
+        source: ${APPDATA_ROOT:?Set APPDATA_ROOT to a dedicated Unraid appdata directory}/storage
+        target: /var/lib/storage
+
+  supavisor:
+    profiles:
+      - manual-database-access
+
+volumes:
+  db-config:
+    driver_opts:
+      type: none
+      device: ${APPDATA_ROOT:?Set APPDATA_ROOT to a dedicated Unraid appdata directory}/db-config
+      o: bind

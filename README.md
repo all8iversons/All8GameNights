@@ -24,6 +24,10 @@ Press `Ctrl+C` to stop the app and function servers. To also stop the local Supa
 
 If you intentionally want to erase and recreate the local database and reload the challenge catalog, run `supabase db reset`. This only affects the local Supabase database.
 
+## Unraid deployment
+
+See the [Unraid deployment guide](deploy/unraid/README.md) for running the app and its self-hosted Supabase services through Compose-Craft. The deployment uses its own PostgreSQL and appdata paths; the existing MariaDB/MySQL server and its WoW data remain unchanged.
+
 For a deployed environment, configure `ALLOWED_ORIGIN` on the Edge Functions with the exact website origin. Configure Supabase's project URL and publishable key in the frontend environment. Keep the server-side Supabase secret/service-role key in Supabase function secrets only; never use a `VITE_` prefix for a privileged key.
 
 The host capability is separate from the spectator code and is held only in the host tab's in-memory session. Keep the host tab open during the event. Completed game results are retained in the database; completed results are not editable in this initial version.
@@ -34,6 +38,7 @@ The host capability is separate from the spectator code and is held only in the 
 npm run build
 npm run lint
 npm test
+npm run test:deployment
 npm run test:integration
 npm run test:e2e
 ```

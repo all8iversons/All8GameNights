@@ -1,0 +1,49 @@
+name: game-night
+
+include:
+  - path:
+      - ./upstream/docker/docker-compose.yml
+      - ./supabase.override.yaml
+    project_directory: ./upstream/docker
+    env_file: ./.env
+
+services:
+  game-night-web:
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      api-gw:
+        condition: service_healthy
+      game-night-migrations:
+        condition: service_completed_successfully
+    environment:
+      VITE_SUPABASE_URL: ${SUPABASE_PUBLIC_URL:?Set SUPABASE_PUBLIC_URL to the LAN-accessible API gateway URL}
+      VITE_SUPABASE_PUBLISHABLE_KEY: ${ANON_KEY:?Generate ANON_KEY using the upstream Supabase key generator}
+    ports:
+      - "${APP_HTTP_PORT:-8088}:8080"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:8080/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  game-night-migrations:
+    image: supabase/postgres:17.6.1.136
+    restart: "no"
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PGHOST: db
+      PGPORT: "5432"
+      PGUSER: postgres
+      PGDATABASE: ${POSTGRES_DB:?Set POSTGRES_DB in the generated Supabase environment}
+      PGPASSWORD: ${POSTGRES_PASSWORD:?Generate POSTGRES_PASSWORD using the upstream Supabase key generator}
+    entrypoint: ["/bin/sh", "/scripts/migrate.sh"]
+    volumes:
+      - ./scripts/migrate.sh:/scripts/migrate.sh:ro
+      - ../../supabase/migrations:/migrations:ro
+      - ../../supabase/seed.sql:/seed/seed.sql:ro
