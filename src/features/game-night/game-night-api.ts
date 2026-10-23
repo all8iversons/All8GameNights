@@ -1,4 +1,5 @@
 import { apiRequest } from '../../lib/api-client';
+import { createIdempotencyKey } from '../../lib/idempotency-key';
 import type { GameNight, LeaderboardEntry, Participant, ChallengeRound, Team } from './types';
 import type { CreatedGameNightResponse } from '../../lib/api-types';
 
@@ -85,7 +86,7 @@ export const gameNightApi = {
       `game-nights/${spectatorCode}/participants/${participantId}/score`,
       {
         method: 'POST',
-        body: { delta, idempotencyKey: crypto.randomUUID() },
+        body: { delta, idempotencyKey: createIdempotencyKey() },
       },
     ),
 
@@ -93,7 +94,7 @@ export const gameNightApi = {
     apiRequest<{ challengeRound: ChallengeRound }>(`game-nights/${spectatorCode}/challenge-draws`, {
       method: 'POST',
       hostCapability,
-      body: { participantId, idempotencyKey: crypto.randomUUID() },
+      body: { participantId, idempotencyKey: createIdempotencyKey() },
     }),
 
   timer: (
