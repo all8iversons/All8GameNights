@@ -1,5 +1,6 @@
 import { useId, useState } from 'react';
 import type { ChallengeRound } from '../game-night/types';
+import { ChallengeTimer } from '../timer/ChallengeTimer';
 
 interface TeammateOption {
   id: string;
@@ -8,6 +9,7 @@ interface TeammateOption {
 
 interface ChallengePanelProps {
   playerName: string;
+  teamName: string | null;
   currentRound: ChallengeRound | null;
   canControl: boolean;
   canDraw: boolean;
@@ -18,12 +20,18 @@ interface ChallengePanelProps {
   tradeOptions: TeammateOption[];
   tradeBlockedByTimer: boolean;
   tradeBusy: boolean;
+  timerBusy: boolean;
   onDraw: () => void;
   onTrade: (teammateId: string) => void;
+  onTimerAction: (
+    action: 'start' | 'pause' | 'resume' | 'reset' | 'finish',
+    durationSeconds?: number,
+  ) => void;
 }
 
 export function ChallengePanel({
   playerName,
+  teamName,
   currentRound,
   canControl,
   canDraw,
@@ -34,8 +42,10 @@ export function ChallengePanel({
   tradeOptions,
   tradeBlockedByTimer,
   tradeBusy,
+  timerBusy,
   onDraw,
   onTrade,
+  onTimerAction,
 }: ChallengePanelProps) {
   const headingId = useId();
   const [teammateId, setTeammateId] = useState('');
@@ -44,12 +54,25 @@ export function ChallengePanel({
       <div>
         <div className="eyebrow">Bonus round</div>
         <h2 id={headingId}>{playerName}&apos;s challenge</h2>
+        {teamName && <p className="muted challenge-team">{teamName}</p>}
       </div>
       {currentRound ? (
-        <div>
-          <h3>{currentRound.challenge.name}</h3>
-          <p className="muted">{currentRound.challenge.instructions}</p>
-          {currentRound.finishedAt && <p className="success">Challenge finished</p>}
+        <div className="challenge-content">
+          <div>
+            <h3>{currentRound.challenge.name}</h3>
+            <p className="muted">{currentRound.challenge.instructions}</p>
+            {currentRound.finishedAt && <p className="success">Challenge finished</p>}
+          </div>
+          {!currentRound.finishedAt && (
+            <ChallengeTimer
+              playerName={playerName}
+              round={currentRound}
+              canControl={canControl}
+              busy={timerBusy}
+              embedded
+              onAction={onTimerAction}
+            />
+          )}
         </div>
       ) : (
         <p className="muted">A surprise game challenge will appear here.</p>

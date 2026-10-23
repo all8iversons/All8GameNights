@@ -69,7 +69,10 @@ export function TeamControls({
   }
 
   return (
-    <section className="panel stack" aria-labelledby="team-controls-heading">
+    <section
+      className="panel stack team-controls-panel"
+      aria-labelledby="team-controls-heading"
+    >
       <div>
         <div className="eyebrow">Team play</div>
         <h2 id="team-controls-heading">Manage teams</h2>

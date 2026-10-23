@@ -1,6 +1,5 @@
 import { useCallback, useState } from 'react';
 import { ChallengePanel } from '../challenge/ChallengePanel';
-import { ChallengeTimer } from '../timer/ChallengeTimer';
 import { gameNightApi } from './game-night-api';
 import { HostControls } from './HostControls';
 import { Scoreboard } from './Scoreboard';
@@ -25,6 +24,7 @@ export function GameNightPage({
   const { gameNight, error, loading, refresh, setError, realtimeConnected } =
     useLiveGameNight(spectatorCode);
   const [busyAction, setBusyAction] = useState('');
+  const [wideScreen, setWideScreen] = useState(false);
   const isHost = Boolean(hostCapability);
   const exhausted = Boolean(
     gameNight && gameNight.challengeRounds.length >= gameNight.availableChallengeCount,
@@ -116,7 +116,7 @@ export function GameNightPage({
   }
 
   return (
-    <>
+    <div className={wideScreen ? 'game-night-page wide-screen-mode' : 'game-night-page'}>
       <div className="host-toolbar">
         <div>
           <div className="eyebrow">
@@ -128,9 +128,20 @@ export function GameNightPage({
           </div>
           <h1>{gameNight.status === 'completed' ? 'Final standings' : 'Game night is on'}</h1>
         </div>
-        <button className="button secondary small" onClick={onLeave}>
-          Leave board
-        </button>
+        <div className="host-toolbar-actions">
+          {isHost && (gameNight.status === 'active' || wideScreen) && (
+            <button
+              className="button secondary small"
+              aria-pressed={wideScreen}
+              onClick={() => setWideScreen((enabled) => !enabled)}
+            >
+              {wideScreen ? 'Exit wide-screen view' : 'Wide-screen view'}
+            </button>
+          )}
+          <button className="button secondary small" onClick={onLeave}>
+            Leave board
+          </button>
+        </div>
       </div>
       <p className="muted" role="status" style={{ maxWidth: 1000, margin: '0 auto 14px' }}>
         {realtimeConnected
@@ -138,7 +149,10 @@ export function GameNightPage({
           : 'Reconnecting to live updates; the board will refresh automatically.'}
       </p>
       {isHost && (
-        <section className="panel stack" style={{ maxWidth: 1000, margin: '0 auto 18px' }}>
+        <section
+          className="panel stack host-share-panel"
+          style={{ maxWidth: 1000, margin: '0 auto 18px' }}
+        >
           <div>
             <p className="muted">Share this 6-digit join code with your players and viewers:</p>
             <code className="share-code">{spectatorCode}</code>
@@ -261,6 +275,9 @@ export function GameNightPage({
                 <div className="player-round" key={participant.id}>
                   <ChallengePanel
                     playerName={participant.displayName}
+                    teamName={
+                      gameNight.teams.find(({ id }) => id === participant.teamId)?.name ?? null
+                    }
                     currentRound={currentRound}
                     canControl={isHost}
                     canDraw={!hasUnfinishedRound}
@@ -271,22 +288,19 @@ export function GameNightPage({
                     tradeOptions={tradeOptions}
                     tradeBlockedByTimer={tradeBlockedByTimer}
                     tradeBusy={busyAction.startsWith('trade:')}
+                    timerBusy={
+                      currentRound !== null && busyAction === `timer:${currentRound.id}`
+                    }
                     onDraw={() => void drawChallenge(participant.id)}
                     onTrade={(teammateId) =>
                       void tradeChallenges(participant.id, teammateId)
                     }
-                  />
-                  {hasUnfinishedRound && currentRound && (
-                    <ChallengeTimer
-                      playerName={participant.displayName}
-                      round={currentRound}
-                      canControl={isHost}
-                      busy={busyAction === `timer:${currentRound.id}`}
-                      onAction={(action, durationSeconds) =>
-                        void timerAction(currentRound.id, action, durationSeconds)
+                    onTimerAction={(action, durationSeconds) => {
+                      if (currentRound) {
+                        void timerAction(currentRound.id, action, durationSeconds);
                       }
-                    />
-                  )}
+                    }}
+                  />
                 </div>
               );
             })}
@@ -318,6 +332,6 @@ export function GameNightPage({
           )}
         </div>
       )}
-    </>
+    </div>
   );
 }

@@ -14,6 +14,11 @@ test('challenge draws are unique and timer controls work', async ({ page }) => {
   await page.getByRole('button', { name: /draw a challenge/i }).first().click();
   await expect(page.getByRole('heading', { name: /no-hud run/i })).toBeVisible();
   await expect(page.getByRole('heading', { name: /random loadout/i })).toBeVisible();
+  const playerACard = page.locator('.challenge-card').filter({
+    has: page.getByRole('heading', { name: "Player A's challenge" }),
+  });
+  await expect(playerACard.getByRole('timer')).toBeVisible();
+  await expect(playerACard.getByRole('button', { name: 'Start' })).toBeVisible();
   await page.getByLabel(/timer duration for player a/i).fill('5');
   await page.getByRole('button', { name: /^start$/i }).first().click();
   await page.getByLabel(/timer duration for player b/i).fill('8');
@@ -46,7 +51,6 @@ test('teammates can trade unfinished challenges but not while a timer is running
   await page.getByLabel('Number of teams').fill('1');
   await page.getByRole('button', { name: /generate random teams/i }).click();
   await page.getByRole('button', { name: /start game night/i }).click();
-
   await page.getByRole('button', { name: /draw a challenge/i }).first().click();
   await page.getByRole('button', { name: /draw a challenge/i }).first().click();
 
@@ -58,6 +62,16 @@ test('teammates can trade unfinished challenges but not while a timer is running
   });
   await expect(playerA.getByRole('heading', { name: /no-hud run/i })).toBeVisible();
   await expect(playerB.getByRole('heading', { name: /random loadout/i })).toBeVisible();
+  await page.getByRole('button', { name: 'Wide-screen view' }).click();
+  await expect(page.locator('.game-night-page')).toHaveClass(/wide-screen-mode/);
+  await expect(page.getByRole('heading', { name: 'Team standings' })).toBeVisible();
+  await expect(
+    page.locator('.scoreboard section[aria-labelledby="team-standings-heading"]'),
+  ).toContainText('Aurora Voyagers');
+  await expect(playerA.getByRole('timer')).toBeVisible();
+  await expect(playerA.getByText('Aurora Voyagers')).toBeVisible();
+  await page.getByRole('button', { name: 'Exit wide-screen view' }).click();
+  await expect(page.locator('.game-night-page')).not.toHaveClass(/wide-screen-mode/);
 
   await playerA.getByLabel('Trade challenge with a teammate').selectOption('player-2');
   await playerA.getByRole('button', { name: 'Trade challenges' }).click();

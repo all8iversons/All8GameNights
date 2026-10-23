@@ -7,6 +7,7 @@ interface ChallengeTimerProps {
   round: ChallengeRound | null;
   canControl: boolean;
   busy: boolean;
+  embedded?: boolean;
   onAction: (
     action: 'start' | 'pause' | 'resume' | 'reset' | 'finish',
     durationSeconds?: number,
@@ -22,7 +23,14 @@ function remainingSecondsForRound(round: ChallengeRound | null): number {
   return round.durationSeconds ?? 0;
 }
 
-export function ChallengeTimer({ playerName, round, canControl, busy, onAction }: ChallengeTimerProps) {
+export function ChallengeTimer({
+  playerName,
+  round,
+  canControl,
+  busy,
+  embedded = false,
+  onAction,
+}: ChallengeTimerProps) {
   const id = useId();
   const headingId = `${id}-heading`;
   const durationId = `${id}-duration`;
@@ -38,12 +46,14 @@ export function ChallengeTimer({ playerName, round, canControl, busy, onAction }
 
   const status = round?.timerStatus ?? 'ready';
   const expired = status === 'expired' || (status === 'running' && remaining === 0);
-  return (
-    <section className="panel stack" aria-labelledby={headingId}>
-      <div>
-        <div className="eyebrow">Beat the clock</div>
-        <h2 id={headingId}>{playerName}&apos;s timer</h2>
-      </div>
+  const content = (
+    <>
+      {!embedded && (
+        <div>
+          <div className="eyebrow">Beat the clock</div>
+          <h2 id={headingId}>{playerName}&apos;s timer</h2>
+        </div>
+      )}
       <div
         className={expired ? 'timer expired' : 'timer'}
         role="timer"
@@ -108,6 +118,16 @@ export function ChallengeTimer({ playerName, round, canControl, busy, onAction }
           )}
         </div>
       )}
+    </>
+  );
+
+  return embedded ? (
+    <div className="challenge-timer stack" role="group" aria-label={`${playerName} timer`}>
+      {content}
+    </div>
+  ) : (
+    <section className="panel stack" aria-labelledby={headingId}>
+      {content}
     </section>
   );
 }

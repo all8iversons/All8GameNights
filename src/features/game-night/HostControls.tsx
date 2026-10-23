@@ -50,7 +50,10 @@ export function HostControls({
   }
 
   return (
-    <section className="panel stack" aria-labelledby="setup-players-heading">
+    <section
+      className="panel stack host-controls-panel"
+      aria-labelledby="setup-players-heading"
+    >
       <div>
         <div className="eyebrow">{status === 'setup' ? 'Before the first round' : 'Host controls'}</div>
         <h2 id="setup-players-heading">{status === 'setup' ? 'Add your players' : 'Update the roster'}</h2>

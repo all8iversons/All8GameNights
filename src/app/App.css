@@ -134,6 +134,9 @@ h2 {
 .player-round {
   display: contents;
 }
+.game-night-page {
+  min-width: 0;
+}
 .stack {
   display: grid;
   gap: 14px;
@@ -266,10 +269,38 @@ h2 {
   background: #27314f;
 }
 .challenge-card {
-  min-height: 210px;
   display: grid;
   align-content: start;
   gap: 14px;
+}
+.challenge-team {
+  margin: -8px 0 0;
+}
+.challenge-content {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(210px, 0.72fr);
+  align-items: start;
+  gap: 20px;
+}
+.challenge-content h3 {
+  margin-top: 0;
+}
+.challenge-timer {
+  align-content: start;
+  gap: 8px;
+  min-width: 0;
+}
+.challenge-timer .timer {
+  font-size: clamp(42px, 6vw, 64px);
+  line-height: 1;
+}
+.challenge-timer .timer-controls {
+  align-items: center;
+}
+.challenge-timer .field {
+  flex: 1 1 100px;
+  min-width: 0;
+  max-width: 150px;
 }
 .timer {
   font-family: 'Segoe UI', sans-serif;
@@ -322,6 +353,64 @@ h2 {
   max-width: 1000px;
   margin: 0 auto 18px;
 }
+.host-toolbar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.game-night-page.wide-screen-mode {
+  position: fixed;
+  z-index: 1000;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh;
+  overflow: auto;
+  padding: 20px clamp(20px, 3vw, 52px) 40px;
+  background: #0d1223;
+}
+.wide-screen-mode .host-toolbar,
+.wide-screen-mode > [role='status'],
+.wide-screen-mode > [role='alert'] {
+  max-width: none !important;
+}
+.wide-screen-mode .host-share-panel,
+.wide-screen-mode .host-controls-panel,
+.wide-screen-mode .team-controls-panel {
+  display: none;
+}
+.wide-screen-mode .game-layout {
+  width: 100%;
+  max-width: none;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: start;
+  gap: 16px;
+}
+.wide-screen-mode .scoreboard {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+.wide-screen-mode .scoreboard > .host-toolbar,
+.wide-screen-mode .scoreboard > .score-disclosure {
+  grid-column: 1 / -1;
+}
+.wide-screen-mode .scoreboard > section h3 {
+  margin-top: 0;
+}
+.wide-screen-mode .challenge-card {
+  min-height: 0;
+  padding: 18px;
+}
+.wide-screen-mode .challenge-content {
+  grid-template-columns: minmax(0, 1fr) minmax(180px, 0.72fr);
+  gap: 14px;
+}
+.wide-screen-mode .timer {
+  font-size: clamp(40px, 5vw, 64px);
+}
 .sr-only {
   position: absolute;
   width: 1px;
@@ -344,6 +433,27 @@ h2 {
   .setup-grid,
   .game-layout {
     grid-template-columns: 1fr;
+  }
+  .challenge-content,
+  .wide-screen-mode .challenge-content {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  .host-toolbar-actions {
+    justify-content: flex-start;
+  }
+  .game-night-page.wide-screen-mode {
+    padding: 14px 16px 32px;
+  }
+  .wide-screen-mode .game-layout {
+    grid-template-columns: 1fr;
+  }
+  .wide-screen-mode .scoreboard {
+    grid-template-columns: 1fr;
+  }
+  .wide-screen-mode .scoreboard > .host-toolbar,
+  .wide-screen-mode .scoreboard > .score-disclosure {
+    grid-column: auto;
   }
   .scoreboard {
     grid-column: auto;
