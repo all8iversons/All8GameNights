@@ -9,7 +9,12 @@ import {
 import { serviceClient } from '../_shared/game-night-auth.ts';
 import { getSnapshot, mapParticipant, requireHost, resolveNight } from './shared.ts';
 import { startGameNight } from './start.ts';
-import { addParticipant } from './participants.ts';
+import { addParticipant, removeParticipant } from './participants.ts';
+import {
+  createChallenge,
+  readChallengeCatalog,
+  updateChallenge,
+} from './challenges.ts';
 import { updateScore } from './score.ts';
 import { completeGameNight } from './complete.ts';
 import { readGameNight } from './read.ts';
@@ -86,6 +91,9 @@ async function handle(request: Request): Promise<Response> {
 
   const [spectatorCode, resource, id, action] = parts;
   if (!spectatorCode) throw new HttpError(404, 'NOT_FOUND', 'This game night could not be found.');
+  if (request.method === 'GET' && resource === 'challenges' && !id) {
+    return readChallengeCatalog(request, spectatorCode);
+  }
   if (request.method === 'GET' && parts.length === 1) return readGameNight(request, spectatorCode);
 
   if (request.method !== 'POST') {
@@ -97,7 +105,14 @@ async function handle(request: Request): Promise<Response> {
     return jsonResponse({ authorized: true });
   }
 
+  if (resource === 'challenges' && !id) return createChallenge(request, spectatorCode);
+  if (resource === 'challenges' && id && !action) {
+    return updateChallenge(request, spectatorCode, id);
+  }
   if (resource === 'participants' && !id) return addParticipant(request, spectatorCode);
+  if (resource === 'participants' && id && action === 'remove') {
+    return removeParticipant(request, spectatorCode, id);
+  }
   if (resource === 'start') return startGameNight(request, spectatorCode);
   if (resource === 'teams' && !id) return createTeam(request, spectatorCode);
   if (resource === 'teams' && id === 'randomize') return randomizeTeams(request, spectatorCode);

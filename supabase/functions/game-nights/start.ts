@@ -13,7 +13,8 @@ export async function startGameNight(request: Request, spectatorCode: string) {
   const { count, error: countError } = await client
     .from('participants')
     .select('id', { count: 'exact', head: true })
-    .eq('game_night_id', night.id);
+    .eq('game_night_id', night.id)
+    .is('removed_at', null);
   if (countError) throw countError;
   if (!count)
     throw new HttpError(400, 'VALIDATION_ERROR', 'Add at least one participant before starting.');

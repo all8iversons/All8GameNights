@@ -41,13 +41,6 @@ export async function drawChallenge(request: Request, spectatorCode: string) {
     if (error.message.includes('PARTICIPANT_NOT_FOUND')) {
       throw new HttpError(404, 'NOT_FOUND', 'Participant was not found.');
     }
-    if (error.message.includes('PLAYER_HAS_UNFINISHED_ROUND')) {
-      throw new HttpError(
-        409,
-        'ROUND_ALREADY_ACTIVE',
-        'Finish this player’s current challenge before drawing another.',
-      );
-    }
     throw error;
   }
   if (!roundId) {

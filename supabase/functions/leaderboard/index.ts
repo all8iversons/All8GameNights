@@ -14,6 +14,7 @@ Deno.serve(async (request) => {
     const { data: nights, error } = await client
       .from('game_nights')
       .select('id, completed_at, participants(id, game_night_id, display_name, score, created_at)')
+      .is('participants.removed_at', null)
       .eq('status', 'completed')
       .order('completed_at', { ascending: false });
     if (error) throw error;

@@ -5,6 +5,190 @@ import { integrationEnvironment } from './setup';
 describe.skipIf(!integrationEnvironment.url || !integrationEnvironment.publishableKey)(
   'challenge functions',
   () => {
+    it('lets a host issue a replacement challenge and preserves the stopped round', async () => {
+      const { hostCapability, spectatorCode } = await createActiveGame();
+      const path = `game-nights/${spectatorCode}`;
+      const snapshot = await invoke<{
+        gameNight: { participants: Array<{ id: string }> };
+      }>(path);
+      const participantId = snapshot.body.gameNight.participants[0].id;
+      const firstDraw = await invoke<{
+        challengeRound: { id: string; challenge: { id: string } };
+      }>(`${path}/challenge-draws`, {
+        method: 'POST',
+        hostCapability,
+        body: { participantId, idempotencyKey: crypto.randomUUID() },
+      });
+      expect(firstDraw.status).toBe(201);
+
+      const started = await invoke(
+        `${path}/challenge-rounds/${firstDraw.body.challengeRound.id}/timer`,
+        {
+          method: 'POST',
+          hostCapability,
+          body: { action: 'start', durationSeconds: 60 },
+        },
+      );
+      expect(started.status).toBe(200);
+
+      const secondDraw = await invoke<{
+        challengeRound: { id: string; challenge: { id: string } };
+      }>(`${path}/challenge-draws`, {
+        method: 'POST',
+        hostCapability,
+        body: { participantId, idempotencyKey: crypto.randomUUID() },
+      });
+      expect(secondDraw.status).toBe(201);
+      expect(secondDraw.body.challengeRound.id).not.toBe(firstDraw.body.challengeRound.id);
+      expect(secondDraw.body.challengeRound.challenge.id).not.toBe(
+        firstDraw.body.challengeRound.challenge.id,
+      );
+
+      const updated = await invoke<{
+        gameNight: {
+          challengeRounds: Array<{
+            id: string;
+            participantId: string;
+            finishedAt: string | null;
+            timerStatus: string;
+          }>;
+        };
+      }>(path);
+      const previousRound = updated.body.gameNight.challengeRounds.find(
+        ({ id }) => id === firstDraw.body.challengeRound.id,
+      );
+      const replacementRound = updated.body.gameNight.challengeRounds.find(
+        ({ id }) => id === secondDraw.body.challengeRound.id,
+      );
+      expect(updated.body.gameNight.challengeRounds).toHaveLength(2);
+      expect(previousRound).toMatchObject({
+        participantId,
+        timerStatus: 'stopped',
+      });
+      expect(previousRound?.finishedAt).not.toBeNull();
+      expect(replacementRound?.finishedAt).toBeNull();
+    });
+
+    it('lets a host add and edit shared challenges, including assigned challenges', async () => {
+      const { hostCapability, spectatorCode } = await createActiveGame();
+      const path = `game-nights/${spectatorCode}/challenges`;
+      const unauthorized = await invoke(path);
+      expect(unauthorized.status).toBe(401);
+
+      const initial = await invoke<{
+        challenges: Array<{
+          id: string;
+          name: string;
+          instructions: string;
+          enabled: boolean;
+        }>;
+      }>(path, { hostCapability });
+      expect(initial.status).toBe(200);
+
+      const unique = crypto.randomUUID();
+      const created = await invoke<{
+        challenge: { id: string; name: string; enabled: boolean };
+      }>(path, {
+        method: 'POST',
+        hostCapability,
+        body: { name: `Integration challenge ${unique}`, instructions: 'A temporary test challenge.' },
+      });
+      expect(created.status).toBe(201);
+      expect(created.body.challenge.enabled).toBe(true);
+
+      const snapshot = await invoke<{
+        gameNight: { participants: Array<{ id: string }> };
+      }>(`game-nights/${spectatorCode}`);
+      const drawn = await invoke<{
+        challengeRound: { id: string; challenge: { id: string } };
+      }>(`game-nights/${spectatorCode}/challenge-draws`, {
+        method: 'POST',
+        hostCapability,
+        body: {
+          participantId: snapshot.body.gameNight.participants[0].id,
+          idempotencyKey: crypto.randomUUID(),
+        },
+      });
+      expect(drawn.status).toBe(201);
+      const original = initial.body.challenges.find(
+        ({ id }) => id === drawn.body.challengeRound.challenge.id,
+      );
+      if (!original) throw new Error('Drawn challenge is missing from the shared catalog.');
+
+      const editedName = `${original.name} ${unique.slice(0, 8)}`;
+      try {
+        const edited = await invoke<{
+          challenge: { id: string; name: string; instructions: string; enabled: boolean };
+        }>(`${path}/${original.id}`, {
+          method: 'POST',
+          hostCapability,
+          body: {
+            name: editedName,
+            instructions: 'Updated instructions appear on current assignments.',
+            enabled: original.enabled,
+          },
+        });
+        expect(edited.status).toBe(200);
+        const updatedSnapshot = await invoke<{
+          gameNight: {
+            challengeRounds: Array<{
+              id: string;
+              challenge: { id: string; name: string; instructions: string };
+            }>;
+          };
+        }>(`game-nights/${spectatorCode}`);
+        expect(
+          updatedSnapshot.body.gameNight.challengeRounds.find(
+            ({ id }) => id === drawn.body.challengeRound.id,
+          )?.challenge,
+        ).toMatchObject({
+          id: original.id,
+          name: editedName,
+          instructions: 'Updated instructions appear on current assignments.',
+        });
+
+        const disabled = await invoke(`${path}/${original.id}`, {
+          method: 'POST',
+          hostCapability,
+          body: {
+            name: editedName,
+            instructions: 'Updated instructions appear on current assignments.',
+            enabled: false,
+          },
+        });
+        expect(disabled.status).toBe(200);
+        const anotherDraw = await invoke<{
+          challengeRound: { challenge: { id: string } };
+        }>(`game-nights/${spectatorCode}/challenge-draws`, {
+          method: 'POST',
+          hostCapability,
+          body: {
+            participantId: snapshot.body.gameNight.participants[1].id,
+            idempotencyKey: crypto.randomUUID(),
+          },
+        });
+        expect(anotherDraw.status).toBe(201);
+        expect(anotherDraw.body.challengeRound.challenge.id).not.toBe(original.id);
+      } finally {
+        const restored = await invoke(`${path}/${original.id}`, {
+          method: 'POST',
+          hostCapability,
+          body: original,
+        });
+        expect(restored.status).toBe(200);
+        const archived = await invoke(`${path}/${created.body.challenge.id}`, {
+          method: 'POST',
+          hostCapability,
+          body: {
+            name: created.body.challenge.name,
+            instructions: 'A temporary test challenge.',
+            enabled: false,
+          },
+        });
+        expect(archived.status).toBe(200);
+      }
+    });
+
     it('draws unique challenges under concurrent requests and rejects repeats after exhaustion', async () => {
       const { hostCapability, spectatorCode } = await createActiveGame();
       const snapshot = await invoke<{

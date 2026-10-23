@@ -6,7 +6,7 @@
 
 ## Summary
 
-Support mid-game roster changes, player-assigned unique challenges with independent timers, team assignments and derived team totals, balanced team randomization, host-configured team generation, six-digit join codes, and casual player-submitted score changes. Extend the existing Supabase-backed game-night snapshot and host-authorized mutation flow; add a deliberately join-code-authorized score endpoint with clear disclosure and request validation. Keep individual scores authoritative so standings, teams, and existing historical results stay consistent.
+Support mid-game roster changes, player-assigned unique challenges with independent timers, team assignments and derived team totals, balanced team randomization, host-configured team generation, six-digit join codes, casual player-submitted score changes, host player removal, shared challenge-catalog management, and a dense wide-screen board for up to 20 players. Extend the existing Supabase-backed game-night snapshot and host-authorized mutation flow; add a deliberately join-code-authorized score endpoint with clear disclosure and request validation. Keep individual scores authoritative so standings, teams, and existing historical results stay consistent.
 
 ## Technical Context
 
@@ -26,7 +26,7 @@ Support mid-game roster changes, player-assigned unique challenges with independ
 
 **Constraints**: Preserve existing host capability authorization, read-only viewer behavior except for the explicitly chosen casual score submission, completed-night immutability, challenge uniqueness per night, durable timers, and existing history compatibility. Rate-limit invalid join-code attempts and public score changes because the six-digit code is low entropy. Do not expose privileged service credentials to the browser.
 
-**Scale/Scope**: Game-night-sized rosters and one shared event; independent concurrent challenge rounds are limited to one unfinished round per player.
+**Scale/Scope**: Game-night-sized rosters with up to 20 players in the dense host view; the challenge catalog is shared across game nights; independent concurrent challenge rounds are limited to one unfinished round per active player.
 
 ## Constitution Check
 
@@ -89,6 +89,9 @@ tests/
 - Generate new six-digit join codes with cryptographic randomness and collision retries while retaining compatibility with existing long codes. Count invalid lookups per source IP and rate-limit them; keep the separate high-entropy host capability for host operations.
 - Randomize all current players into existing teams through a single host-authorized database operation, assigning team sizes that differ by at most one.
 - Allow the host to generate a requested number of teams or set a maximum players-per-team capacity. Generate unique original space-themed names and replace the existing teams and assignments atomically, preserving individual scores.
+- Soft-remove participants to preserve historical scores and challenge rounds, while stopping unfinished timers and excluding removed players from active roster operations and standings.
+- Provide host-authorized shared challenge catalog operations. Edits update current assignment details immediately; disabling prevents future draws without deleting consumed history.
+- Provide a compact responsive host wide-screen layout, placing score lines beside player cards and supporting up to 20 players across multiple columns.
 - Reuse the current snapshot refresh and realtime notification path for participants, teams, scores, and challenge rounds.
 - Retain current individual winner history. Team totals appear in the active board; expanding historical leaderboard records with team winners is outside this feature's specified scope.
 

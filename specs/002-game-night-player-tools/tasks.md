@@ -142,6 +142,69 @@ No setup tasks.
 
 ---
 
+## Phase 9: User Story 8 - Remove a player and preserve history
+
+**Goal**: Let hosts remove players during setup or active play without losing scores or challenge history.
+
+**Independent Test**: Remove a player with a running challenge, verify the player is absent from active views, the timer is stopped and round finished, history is retained, and their name can be reused.
+
+### Tests for User Story 8
+
+- [x] T035 Add integration coverage for soft removal, history retention, stopped timers, rejected mutations, and name reuse in `tests/integration/game-night.test.ts`.
+- [x] T036 Add end-to-end coverage for host removal and active roster updates in `tests/e2e/challenge-timer.spec.ts` and `tests/e2e/mock-backend.ts`.
+
+### Implementation for User Story 8
+
+- [x] T037 Add the soft-removal schema, host-authorized atomic removal function, active-participant filtering, and mutation guards in `supabase/migrations/007_player_removal_and_challenge_catalog.sql`, `supabase/functions/game-nights/participants.ts`, `supabase/functions/game-nights/shared.ts`, `supabase/functions/game-nights/start.ts`, `supabase/functions/game-nights/teams.ts`, and `supabase/functions/leaderboard/index.ts`.
+- [x] T038 Add the host removal API and confirmation control in `src/features/game-night/game-night-api.ts` and `src/features/game-night/HostControls.tsx`.
+
+---
+
+## Phase 10: User Story 9 - Manage the shared challenge catalog
+
+**Goal**: Let hosts maintain the shared challenge list, with edits reflected on current assignments and disablement limited to future draws.
+
+**Independent Test**: Add, edit, and disable catalog challenges; verify authorization, immediate assignment updates, and future-draw behavior.
+
+### Tests for User Story 9
+
+- [x] T039 Add integration coverage for host authorization, shared catalog creation, edits to assigned challenges, and cleanup in `tests/integration/challenges.test.ts`.
+- [x] T040 Add end-to-end coverage for catalog management in `tests/e2e/challenge-timer.spec.ts` and `tests/e2e/mock-backend.ts`.
+
+### Implementation for User Story 9
+
+- [x] T041 Add host-authorized shared catalog handlers and routes in `supabase/functions/game-nights/challenges.ts` and `supabase/functions/game-nights/index.ts`.
+- [x] T042 Add the catalog API and host controls in `src/features/game-night/game-night-api.ts` and `src/features/game-night/ChallengeCatalogControls.tsx`.
+- [x] T043 Broadcast catalog changes to game-night rooms and preserve current assignments in `supabase/migrations/007_player_removal_and_challenge_catalog.sql`.
+
+---
+
+## Phase 11: User Story 10 - Monitor up to 20 players in wide-screen mode
+
+**Goal**: Fit a large active roster into a compact responsive host view with scores beside player cards.
+
+**Independent Test**: Render 20 active players in wide-screen mode and verify all cards and score lines are present.
+
+### Tests for User Story 10
+
+- [x] T044 Add an end-to-end 20-player wide-screen layout scenario in `tests/e2e/challenge-timer.spec.ts` and `tests/e2e/mock-backend.ts`.
+
+### Implementation for User Story 10
+
+- [x] T045 Add compact player/score rows and responsive wide-screen columns in `src/features/game-night/GameNightPage.tsx` and `src/app/App.css`.
+
+---
+
+## Phase 12: Documentation and final verification
+
+- [x] T046 Update the specification, API contract, data model, research, implementation plan, and quickstart with removal, shared catalog, and wide-screen behavior.
+- [ ] T047 Verify migration, build, lint, focused integration, end-to-end, and diff checks; record unavailable external dependencies explicitly.
+- [x] T048 Add integration and end-to-end coverage for replacing an unfinished challenge and preserving the stopped round in `tests/integration/challenges.test.ts` and `tests/e2e/challenge-timer.spec.ts`.
+- [x] T049 Update the atomic challenge-draw operation and host control to confirm, stop, finish, and preserve replaced rounds in `supabase/migrations/007_player_removal_and_challenge_catalog.sql` and `src/features/challenge/ChallengePanel.tsx`.
+- [x] T050 Document replacement confirmation, history retention, and no-challenges behavior in the feature spec, API contract, data model, and quickstart.
+
+---
+
 ## Dependencies & Execution Order
 
 ### Phase Dependencies
@@ -149,7 +212,7 @@ No setup tasks.
 - **Setup (Phase 1)**: No dependencies; existing project setup is reused.
 - **Foundational (Phase 2)**: Required before story work because participant/team/round snapshots and persistence depend on the additive schema.
 - **User Stories (Phases 3-6)**: Each depends on the foundational phase. The story UI changes may be developed independently after the shared schema/types land.
-- **Polish (Phase 7)**: Depends on all selected stories being implemented.
+- **Polish and later stories (Phases 7-12)**: Depend on the foundational phase; final verification follows the removal, catalog, and wide-screen work.
 
 ### User Story Dependencies
 
@@ -158,6 +221,9 @@ No setup tasks.
 - **US3 (P2)**: Depends on the shared participant snapshot; otherwise independent of US1 and US2.
 - **US4 (P2)**: Depends on shared score/snapshot flow. Team-total verification is finalized with US3; the individual score submission can be tested independently.
 - **US7 (P2)**: Depends on team assignments and player-scoped unfinished challenge rounds from US2 and US3.
+- **US8 (P2)**: Depends on participant snapshots and player-scoped challenge rounds from US1 and US2.
+- **US9 (P2)**: Depends on the shared challenge catalog and round snapshot from US2.
+- **US10 (P2)**: Depends on active participant and challenge snapshots from US1 and US2.
 
 ### Parallel Opportunities
 

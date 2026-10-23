@@ -29,10 +29,15 @@ test('challenge draws are unique and timer controls work', async ({ page }) => {
   await expect(page.getByText(/timer running/i)).toHaveCount(1);
   await page.getByRole('button', { name: /resume/i }).first().click();
   await expect(page.getByText(/timer running/i)).toHaveCount(2);
-  await page.getByRole('button', { name: /finish challenge/i }).first().click();
-  await page.getByRole('button', { name: /draw next challenge/i }).first().click();
+  page.once('dialog', (dialog) => void dialog.dismiss());
+  await page.getByRole('button', { name: /issue new challenge/i }).first().click();
+  await expect(page.getByRole('heading', { name: /no-hud run/i })).toBeVisible();
+  await expect(page.getByText(/timer running/i)).toHaveCount(2);
+  page.once('dialog', (dialog) => void dialog.accept());
+  await page.getByRole('button', { name: /issue new challenge/i }).first().click();
   await expect(page.getByRole('heading', { name: /random loadout/i })).toBeVisible();
   await expect(page.getByRole('heading', { name: /one-life challenge/i })).toBeVisible();
+  await expect(page.getByText(/timer running/i)).toHaveCount(1);
 });
 
 test('teammates can trade unfinished challenges but not while a timer is running', async ({
@@ -82,4 +87,86 @@ test('teammates can trade unfinished challenges but not while a timer is running
   await page.getByRole('button', { name: /^start$/i }).first().click();
   await expect(playerA.getByText(/pause or stop both timers before trading/i)).toBeVisible();
   await expect(playerA.getByLabel('Trade challenge with a teammate')).toHaveCount(0);
+});
+
+test('hosts can manage the shared challenge catalog and remove active players', async ({
+  page,
+}) => {
+  await installMockBackend(page);
+  await page.goto('/');
+  await page.getByRole('button', { name: /create game night/i }).click();
+  for (const name of ['Player A', 'Player B', 'Player C']) {
+    await page.getByLabel(/player name/i).fill(name);
+    await page.getByRole('button', { name: /add player/i }).click();
+  }
+  await page.getByRole('button', { name: /start game night/i }).click();
+  await page.getByRole('button', { name: /draw a challenge/i }).first().click();
+  const playerB = page.locator('.challenge-card').filter({
+    has: page.getByRole('heading', { name: "Player B's challenge" }),
+  });
+  await playerB.getByRole('button', { name: 'Draw a challenge' }).click();
+
+  const playerA = page.locator('.challenge-card').filter({
+    has: page.getByRole('heading', { name: "Player A's challenge" }),
+  });
+  await page.getByText('Manage shared challenge catalog').click();
+  await page.getByLabel('Challenge name', { exact: true }).first().fill('Community Challenge');
+  await page
+    .getByLabel('Instructions', { exact: true })
+    .first()
+    .fill('Complete a challenge suggested by the group.');
+  await page.getByRole('button', { name: 'Add challenge' }).click();
+
+  const communityRow = page.locator('.challenge-catalog-list li').filter({
+    hasText: 'Community Challenge',
+  });
+  await expect(communityRow).toHaveCount(1);
+  await communityRow.getByLabel('Challenge name').fill('Community Challenge Updated');
+  await communityRow.getByLabel('Instructions').fill('Use the updated group challenge.');
+  await communityRow.getByRole('button', { name: 'Save challenge' }).click();
+  await expect(page.locator('.challenge-catalog-controls').getByRole('status')).toContainText(
+    /updated/i,
+  );
+  for (const challengeName of ['No-HUD Run', 'Random Loadout']) {
+    const assignedChallenge = page.locator('.challenge-catalog-list li').filter({
+      hasText: challengeName,
+    });
+    await assignedChallenge.getByLabel('Available for future draws').uncheck();
+    await assignedChallenge.getByRole('button', { name: 'Save challenge' }).click();
+  }
+  const playerC = page.locator('.challenge-card').filter({
+    has: page.getByRole('heading', { name: "Player C's challenge" }),
+  });
+  await expect(playerC.getByRole('button', { name: 'Draw a challenge' })).toBeEnabled();
+
+  await page.getByLabel(/timer duration for player a/i).fill('60');
+  await playerA.getByRole('button', { name: 'Start' }).click();
+  page.once('dialog', (dialog) => void dialog.accept());
+  await page.getByRole('button', { name: 'Remove Player A' }).click();
+  await expect(
+    page.locator('.challenge-card').filter({
+      has: page.getByRole('heading', { name: "Player A's challenge" }),
+    }),
+  ).toHaveCount(0);
+  await expect(
+    page.locator('.challenge-card').filter({
+      has: page.getByRole('heading', { name: "Player B's challenge" }),
+    }),
+  ).toBeVisible();
+});
+
+test('host wide-screen view lays out a 20-player roster in compact columns', async ({ page }) => {
+  await installMockBackend(page);
+  await page.goto('/');
+  await page.getByRole('button', { name: /create game night/i }).click();
+  for (let index = 1; index <= 20; index += 1) {
+    await page.getByLabel(/player name/i).fill(`Player ${index}`);
+    await page.getByRole('button', { name: /add player/i }).click();
+  }
+  await page.getByRole('button', { name: /start game night/i }).click();
+  await page.getByRole('button', { name: 'Wide-screen view' }).click();
+
+  await expect(page.locator('.wide-player-row')).toHaveCount(20);
+  await expect(page.locator('.wide-scoreline')).toHaveCount(20);
+  await expect(page.getByRole('button', { name: 'Exit wide-screen view' })).toBeVisible();
 });

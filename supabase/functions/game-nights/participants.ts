@@ -37,3 +37,26 @@ export async function addParticipant(request: Request, spectatorCode: string) {
   if (error) throw error;
   return jsonResponse({ participant: mapParticipant(participant) }, 201);
 }
+
+export async function removeParticipant(
+  request: Request,
+  spectatorCode: string,
+  participantId: string,
+) {
+  const { client, night, authorized } = await requireHost(request, spectatorCode);
+  if (authorized.status !== 'setup' && authorized.status !== 'active') {
+    throw new HttpError(409, 'NIGHT_COMPLETED', 'Players cannot be removed after the game ends.');
+  }
+  const { error } = await client.rpc('remove_game_night_participant', {
+    p_game_night_id: night.id,
+    p_participant_id: participantId,
+  });
+  if (error?.message.includes('PARTICIPANT_NOT_FOUND')) {
+    throw new HttpError(404, 'NOT_FOUND', 'Player was not found.');
+  }
+  if (error?.message.includes('EDITABLE_NIGHT_NOT_FOUND')) {
+    throw new HttpError(409, 'NIGHT_COMPLETED', 'Players cannot be removed after the game ends.');
+  }
+  if (error) throw error;
+  return jsonResponse({ removed: true });
+}

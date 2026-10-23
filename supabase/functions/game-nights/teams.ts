@@ -105,7 +105,8 @@ export async function generateTeams(request: Request, spectatorCode: string) {
   const { count: participantCount, error: participantError } = await client
     .from('participants')
     .select('id', { count: 'exact', head: true })
-    .eq('game_night_id', night.id);
+    .eq('game_night_id', night.id)
+    .is('removed_at', null);
   if (participantError) throw participantError;
   if (!participantCount) {
     throw new HttpError(
@@ -193,6 +194,7 @@ export async function assignParticipantToTeam(
     .update({ team_id: body.teamId })
     .eq('game_night_id', night.id)
     .eq('id', participantId)
+    .is('removed_at', null)
     .select('*')
     .maybeSingle();
   if (error?.code === '23503') {

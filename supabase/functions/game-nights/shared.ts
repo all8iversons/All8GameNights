@@ -84,21 +84,28 @@ export async function getSnapshot(
     { data: participants, error: participantError },
     { data: teams, error: teamError },
     { data: rounds, error: roundError },
-    { count: availableChallengeCount, error: challengeError },
+    { data: enabledChallenges, error: challengeError },
   ] = await Promise.all([
-    client.from('participants').select('*').eq('game_night_id', night.id).order('created_at'),
+    client
+      .from('participants')
+      .select('*')
+      .eq('game_night_id', night.id)
+      .is('removed_at', null)
+      .order('created_at'),
     client.from('teams').select('*').eq('game_night_id', night.id).order('created_at'),
     client
       .from('challenge_rounds')
       .select('*, challenges(id, name, instructions)')
       .eq('game_night_id', night.id)
       .order('selected_at'),
-    client.from('challenges').select('id', { count: 'exact', head: true }).eq('enabled', true),
+    client.from('challenges').select('id').eq('enabled', true),
   ]);
   if (participantError) throw participantError;
   if (teamError) throw teamError;
   if (roundError) throw roundError;
   const mappedParticipants = (participants ?? []).map(mapParticipant);
+  const usedChallengeIds = new Set((rounds ?? []).map((round) => round.challenge_id));
+  const enabledChallengeIds = (enabledChallenges ?? []).map(({ id }) => id);
   const teamScores = new Map<string, number>();
   for (const participant of mappedParticipants) {
     if (participant.teamId) {
@@ -119,7 +126,8 @@ export async function getSnapshot(
       participants: mappedParticipants,
       teams: (teams ?? []).map((team) => mapTeam(team, teamScores.get(team.id) ?? 0)),
       challengeRounds: (rounds ?? []).map(mapRound),
-      availableChallengeCount: availableChallengeCount ?? 0,
+      availableChallengeCount: enabledChallengeIds.length,
+      unusedChallengeCount: enabledChallengeIds.filter((id) => !usedChallengeIds.has(id)).length,
       challengeCatalogAvailable: !challengeError,
       winners:
         night.status === 'completed'

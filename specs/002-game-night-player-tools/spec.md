@@ -113,11 +113,51 @@ As a player, I want to swap my unfinished challenge with a teammate's unfinished
 4. **Given** a trade request is retried with the same idempotency key, **When** the retry is processed, **Then** the assignments remain swapped only once.
 5. **Given** someone has the shared room code, **When** they request a same-team trade, **Then** the interface discloses that the room code does not verify player identity.
 
+### User Story 8 - Remove a player from a game night (Priority: P2)
+
+As a host, I want to remove a player who is no longer participating, so the active roster and board show only current players.
+
+**Independent Test**: Remove a player with an active challenge and verify that the player leaves the active roster, their timer stops, and their score and challenge history remain preserved.
+
+**Acceptance Scenarios**:
+
+1. **Given** a game night is in setup or active play, **When** the host confirms removal of a player, **Then** the player is excluded from the active roster and standings.
+2. **Given** the removed player has an unfinished challenge, **When** removal succeeds, **Then** the challenge round is finished and any running timer is stopped while its history remains preserved.
+3. **Given** a player has been removed, **When** a score or challenge action targets that player, **Then** the action is rejected and no state changes.
+4. **Given** a player has been removed, **When** a new player with the same name is added, **Then** the new player is distinct and the removed player's history remains intact.
+
+### User Story 9 - Manage the shared challenge catalog (Priority: P2)
+
+As a host, I want to add, edit, and disable challenges, so the challenge pool can be maintained without direct database access.
+
+**Independent Test**: Add a challenge, edit an already-assigned challenge, and disable a challenge; verify edits appear on its current assignment and disabled challenges are excluded from future draws.
+
+**Acceptance Scenarios**:
+
+1. **Given** a host opens challenge management, **When** the catalog loads, **Then** the host can see each shared challenge and its enabled state.
+2. **Given** a valid challenge name and instructions, **When** the host adds it, **Then** it is available for future draws.
+3. **Given** a challenge is already assigned, **When** the host edits its name or instructions, **Then** the current assignment immediately displays the updated details.
+4. **Given** a host disables a challenge, **When** a future challenge is drawn, **Then** that challenge is not selected; existing assignments and history are preserved.
+5. **Given** a viewer or unauthorized caller attempts catalog management, **When** they request or change the catalog, **Then** the operation is rejected.
+
+### User Story 10 - View a dense host board (Priority: P2)
+
+As a host, I want a compact wide-screen board, so I can monitor a large roster and their challenges at a glance.
+
+**Independent Test**: Start a game with 20 players, open wide-screen mode, and verify that all players, scores, assigned challenges, and timers fit the responsive multi-column board.
+
+**Acceptance Scenarios**:
+
+1. **Given** a host opens wide-screen mode on a desktop display, **When** up to 20 players are in the roster, **Then** the board uses compact responsive columns and keeps each player's score line beside their player card.
+2. **Given** a host exits wide-screen mode, **When** the regular board is shown, **Then** its existing layout remains available.
+
 ### Edge Cases
 
 - Two hosts try to add players with the same name at nearly the same time; only one succeeds and the other receives a duplicate-name message.
+- A removed player's unfinished timer is stopped and the round history remains retained; the removed player is not included in active roster operations or standings.
+- A host edits or disables a challenge that is already assigned; the history remains consumed and any edit is reflected immediately in the assignment.
 - A player is added after team assignments already exist; the new player is unassigned until the host assigns them.
-- A host tries to assign a challenge to a player who has an unfinished round; the existing round remains intact.
+- A host cancels a replacement challenge confirmation or has no unused challenges available; the player's unfinished round and timer remain unchanged.
 - Two players request a challenge at the same time when only one unused challenge remains; it is assigned at most once and the other request receives the no-challenges-remaining response.
 - A team has no members; it remains visible with a total of zero or can be removed by the host.
 - A team or player name is blank, too long, or duplicated within the relevant game night; the change is rejected with clear guidance.
@@ -137,7 +177,7 @@ As a player, I want to swap my unfinished challenge with a teammate's unfinished
 - **FR-005**: The host MUST be able to assign each player to at most one team and change or remove that assignment during setup or active play.
 - **FR-006**: The live board MUST show individual scores and team totals equal to the sum of assigned members' scores; unassigned players MUST remain in individual standings.
 - **FR-007**: The host MUST be able to draw an unused challenge for a selected player during an active game night.
-- **FR-008**: At most one unfinished challenge round MAY be assigned to a player at a time; another draw for that player MUST be rejected until the current round is explicitly finished. Resetting a timer MUST NOT finish its round.
+- **FR-008**: At most one unfinished challenge round MAY be assigned to a player at a time. The host MAY issue a replacement after confirming; replacement MUST finish the existing round, stop its timer, and retain its history. If no unused challenge is available, the existing round MUST remain unchanged. Resetting a timer MUST NOT finish its round.
 - **FR-009**: A challenge MUST NOT be drawn more than once during a game night, regardless of which player it is assigned to.
 - **FR-010**: The host MUST be able to independently start, pause, resume, reset, and finish each player's challenge timer without changing another player's round or timer.
 - **FR-011**: The live board MUST show each assigned player's challenge, instructions, timer state, and time remaining, and MUST signal that player's timer expiration.
@@ -153,6 +193,11 @@ As a player, I want to swap my unfinished challenge with a teammate's unfinished
 - **FR-021**: Invalid join-code attempts MUST be rate-limited by source IP, and public score submissions MUST remain rate-limited.
 - **FR-022**: Team standings MUST display the names of all players assigned to each team and clearly indicate when a team has no assigned players.
 - **FR-023**: The host MUST be able to generate teams by specifying either the number of teams or players per team; players MUST be distributed randomly and evenly, generated teams MUST use unique original space-themed names, and existing teams MUST be replaced atomically without changing individual scores.
+- **FR-024**: The host MUST be able to remove an active player during setup or play; removal MUST preserve scores and challenge history, stop and finish any unfinished round, and exclude the player from active roster operations and standings.
+- **FR-025**: The host MUST be able to list, add, edit, enable, and disable challenges in the shared catalog; unauthorized viewers MUST NOT manage the catalog, and edits MUST be reflected immediately in current assignments.
+- **FR-026**: Disabled challenges MUST be excluded from future draws without deleting existing challenge history or making already-assigned challenges available again.
+- **FR-027**: The host MUST be able to toggle a dense wide-screen board that displays up to 20 players with score lines beside their cards in responsive columns.
+- **FR-028**: When a player has an unfinished challenge, the host MUST be asked to confirm before issuing a replacement challenge; cancelling MUST leave the current challenge and timer unchanged.
 
 ### Key Entities
 
@@ -174,6 +219,10 @@ As a player, I want to swap my unfinished challenge with a teammate's unfinished
 - **SC-006**: Invalid or unauthorized-state changes provide a visible error and do not alter saved game-night state in 100% of tested cases.
 - **SC-007**: A viewer can join with a six-digit code, and repeated invalid code attempts are throttled; randomizing players assigns the full roster with team sizes balanced to within one player.
 - **SC-008**: A host can generate the requested team count or player capacity in one action, see all players assigned to balanced teams, and retain every individual score.
+- **SC-009**: A host can remove a player and see the active roster update while the player's score and challenge history remain preserved and any unfinished timer is stopped.
+- **SC-010**: A host can add and edit shared challenges; an edited challenge appears with its updated details on any existing assignment, and a disabled challenge is unavailable for future draws.
+- **SC-011**: Wide-screen mode displays all 20 players in a compact, responsive multi-column layout with each score line beside its player card.
+- **SC-012**: A host can confirm replacement of a player's unfinished challenge, and the next challenge appears while the prior round remains in history with its timer stopped; cancelling confirmation leaves the current round unchanged.
 
 ## Assumptions
 
@@ -181,5 +230,7 @@ As a player, I want to swap my unfinished challenge with a teammate's unfinished
 - Individual scores remain the source of truth; team totals are derived and do not replace or duplicate player scores.
 - A challenge is unique across the entire game night, even when assigned to different players.
 - Each player can have only one unfinished challenge at a time; different players may run independent rounds and timers concurrently.
+- Removing a player is a soft removal: historical records remain stored, but the player is omitted from active rosters and standings and cannot receive further score or challenge mutations.
+- Challenges are shared across game nights. Catalog edits apply immediately, including to current assignments; disabling affects future draws only and does not delete challenge history.
 - Player-submitted scores use the casual-play trust model selected by the user: possession of the spectator code permits submission under any player's name. The interface must disclose this; it is not authentication.
 - Existing completed-game history continues to represent individual player results. Team history enhancements beyond recording current team totals are not included unless needed to preserve current behavior.

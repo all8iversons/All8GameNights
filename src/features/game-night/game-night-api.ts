@@ -1,6 +1,13 @@
 import { apiRequest } from '../../lib/api-client';
 import { createIdempotencyKey } from '../../lib/idempotency-key';
-import type { GameNight, LeaderboardEntry, Participant, ChallengeRound, Team } from './types';
+import type {
+  Challenge,
+  GameNight,
+  LeaderboardEntry,
+  Participant,
+  ChallengeRound,
+  Team,
+} from './types';
 import type { CreatedGameNightResponse } from '../../lib/api-types';
 
 export const gameNightApi = {
@@ -22,6 +29,47 @@ export const gameNightApi = {
       hostCapability,
       body: { displayName },
     }),
+
+  removeParticipant: (spectatorCode: string, hostCapability: string, participantId: string) =>
+    apiRequest<{ removed: true }>(
+      `game-nights/${spectatorCode}/participants/${participantId}/remove`,
+      {
+        method: 'POST',
+        hostCapability,
+        body: {},
+      },
+    ),
+
+  challengeCatalog: (spectatorCode: string, hostCapability: string) =>
+    apiRequest<{ challenges: Challenge[] }>(`game-nights/${spectatorCode}/challenges`, {
+      hostCapability,
+    }),
+
+  createChallenge: (
+    spectatorCode: string,
+    hostCapability: string,
+    challenge: Pick<Challenge, 'name' | 'instructions' | 'enabled'>,
+  ) =>
+    apiRequest<{ challenge: Challenge }>(`game-nights/${spectatorCode}/challenges`, {
+      method: 'POST',
+      hostCapability,
+      body: challenge,
+    }),
+
+  updateChallenge: (
+    spectatorCode: string,
+    hostCapability: string,
+    challengeId: string,
+    challenge: Pick<Challenge, 'name' | 'instructions' | 'enabled'>,
+  ) =>
+    apiRequest<{ challenge: Challenge }>(
+      `game-nights/${spectatorCode}/challenges/${challengeId}`,
+      {
+        method: 'POST',
+        hostCapability,
+        body: challenge,
+      },
+    ),
 
   createTeam: (spectatorCode: string, hostCapability: string, name: string) =>
     apiRequest<{ team: Team }>(`game-nights/${spectatorCode}/teams`, {

@@ -26,6 +26,95 @@ describe.skipIf(!integrationEnvironment.url || !integrationEnvironment.publishab
       expect(rejected.body.error.code).toBe('UNAUTHORIZED');
     });
 
+    it('removes players without deleting their challenge history', async () => {
+      const { hostCapability, spectatorCode } = await createActiveGame();
+      const snapshotPath = `game-nights/${spectatorCode}`;
+      const snapshot = await invoke<{
+        gameNight: { participants: Array<{ id: string; displayName: string }> };
+      }>(snapshotPath);
+      const [removedPlayer, remainingPlayer] = snapshot.body.gameNight.participants;
+      const scoreIdempotencyKey = crypto.randomUUID();
+      const score = await invoke(
+        `game-nights/${spectatorCode}/participants/${removedPlayer.id}/score`,
+        {
+          method: 'POST',
+          body: { delta: 100, idempotencyKey: scoreIdempotencyKey },
+        },
+      );
+      expect(score.status).toBe(200);
+      const draw = await invoke<{
+        challengeRound: { id: string };
+      }>(`game-nights/${spectatorCode}/challenge-draws`, {
+        method: 'POST',
+        hostCapability,
+        body: { participantId: removedPlayer.id, idempotencyKey: crypto.randomUUID() },
+      });
+      expect(draw.status).toBe(201);
+      expect(
+        (
+          await invoke(
+            `game-nights/${spectatorCode}/challenge-rounds/${draw.body.challengeRound.id}/timer`,
+            {
+              method: 'POST',
+              hostCapability,
+              body: { action: 'start', durationSeconds: 60 },
+            },
+          )
+        ).status,
+      ).toBe(200);
+
+      expect(
+        (
+          await invoke(`game-nights/${spectatorCode}/participants/${removedPlayer.id}/remove`, {
+            method: 'POST',
+            hostCapability,
+            body: {},
+          })
+        ).status,
+      ).toBe(200);
+      const afterRemoval = await invoke<{
+        gameNight: {
+          participants: Array<{ id: string }>;
+          challengeRounds: Array<{
+            id: string;
+            participantId: string;
+            finishedAt: string | null;
+            timerStatus: string;
+          }>;
+        };
+      }>(snapshotPath);
+      expect(afterRemoval.body.gameNight.participants.map(({ id }) => id)).toEqual([
+        remainingPlayer.id,
+      ]);
+      expect(afterRemoval.body.gameNight.challengeRounds).toHaveLength(1);
+      expect(afterRemoval.body.gameNight.challengeRounds[0]).toMatchObject({
+        participantId: removedPlayer.id,
+        timerStatus: 'stopped',
+      });
+      expect(afterRemoval.body.gameNight.challengeRounds[0].finishedAt).not.toBeNull();
+
+      const rejectedScore = await invoke<{ error: { code: string } }>(
+        `game-nights/${spectatorCode}/participants/${removedPlayer.id}/score`,
+        {
+          method: 'POST',
+          body: { delta: 100, idempotencyKey: scoreIdempotencyKey },
+        },
+      );
+      expect(rejectedScore.status).toBe(404);
+      expect(rejectedScore.body.error.code).toBe('NOT_FOUND');
+
+      const readded = await invoke<{ participant: { id: string } }>(
+        `game-nights/${spectatorCode}/participants`,
+        {
+          method: 'POST',
+          hostCapability,
+          body: { displayName: removedPlayer.displayName },
+        },
+      );
+      expect(readded.status).toBe(201);
+      expect(readded.body.participant.id).not.toBe(removedPlayer.id);
+    });
+
     it('trades current challenges only between teammates and blocks running timers', async () => {
       const { hostCapability, spectatorCode } = await createActiveGame();
       const snapshotPath = `game-nights/${spectatorCode}`;

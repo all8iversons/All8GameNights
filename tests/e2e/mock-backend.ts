@@ -13,7 +13,7 @@ interface MockRound {
   id: string;
   gameNightId: string;
   participantId: string;
-  challenge: { id: string; name: string; instructions: string };
+  challenge: { id: string; name: string; instructions: string; enabled: boolean };
   selectedAt: string;
   finishedAt: string | null;
   timerStatus: 'ready' | 'running' | 'paused' | 'expired' | 'stopped';
@@ -33,12 +33,28 @@ export async function installMockBackend(page: Page) {
     teams: MockTeam[];
     challengeRounds: MockRound[];
     availableChallengeCount: number;
+    unusedChallengeCount: number;
     challengeCatalogAvailable: boolean;
   } | null = null;
   const challenges = [
-    { id: 'challenge-1', name: 'No-HUD Run', instructions: 'Play a level with the HUD hidden.' },
-    { id: 'challenge-2', name: 'Random Loadout', instructions: 'Use a random loadout.' },
-    { id: 'challenge-3', name: 'One-Life Challenge', instructions: 'Play without restarting.' },
+    {
+      id: 'challenge-1',
+      name: 'No-HUD Run',
+      instructions: 'Play a level with the HUD hidden.',
+      enabled: true,
+    },
+    {
+      id: 'challenge-2',
+      name: 'Random Loadout',
+      instructions: 'Use a random loadout.',
+      enabled: true,
+    },
+    {
+      id: 'challenge-3',
+      name: 'One-Life Challenge',
+      instructions: 'Play without restarting.',
+      enabled: true,
+    },
   ];
   interface MockTeam {
     id: string;
@@ -85,7 +101,8 @@ export async function installMockBackend(page: Page) {
         participants: [],
         teams: [],
         challengeRounds: [],
-        availableChallengeCount: challenges.length,
+        availableChallengeCount: challenges.filter(({ enabled }) => enabled).length,
+        unusedChallengeCount: challenges.filter(({ enabled }) => enabled).length,
         challengeCatalogAvailable: true,
       };
       return send(
@@ -102,7 +119,26 @@ export async function installMockBackend(page: Page) {
       return send({ error: { code: 'NOT_FOUND', message: 'Not found' } }, 404);
     }
 
-    if (method === 'GET' && segments.length === 2) return send({ gameNight });
+    if (method === 'GET' && segments[2] === 'challenges') {
+      if (request.headers().authorization !== `****** {
+        return send(
+          { error: { code: 'UNAUTHORIZED', message: 'Host authorization is invalid.' } },
+          401,
+        );
+      }
+      return send({ challenges });
+    }
+
+    if (method === 'GET' && segments.length === 2) {
+      const usedChallengeIds = new Set(
+        gameNight.challengeRounds.map(({ challenge }) => challenge.id),
+      );
+      gameNight.availableChallengeCount = challenges.filter(({ enabled }) => enabled).length;
+      gameNight.unusedChallengeCount = challenges.filter(
+        ({ id, enabled }) => enabled && !usedChallengeIds.has(id),
+      ).length;
+      return send({ gameNight });
+    }
 
     if (method === 'POST' && segments[2] === 'host-session') {
       if (request.headers().authorization !== `Bearer ${hostCapability}`) {
@@ -126,6 +162,57 @@ export async function installMockBackend(page: Page) {
       };
       gameNight.participants.push(participant);
       return send({ participant }, 201);
+    }
+
+    if (method === 'POST' && segments[2] === 'participants' && segments[4] === 'remove') {
+      const participant = gameNight.participants.find(({ id }) => id === segments[3]);
+      if (!participant)
+        return send({ error: { code: 'NOT_FOUND', message: 'Player not found' } }, 404);
+      for (const round of gameNight.challengeRounds) {
+        if (round.participantId === participant.id && !round.finishedAt) {
+          round.finishedAt = new Date().toISOString();
+          round.timerStatus = 'stopped';
+          round.deadlineAt = null;
+          round.pausedRemainingSeconds = null;
+        }
+      }
+      gameNight.participants = gameNight.participants.filter(({ id }) => id !== participant.id);
+      for (const team of gameNight.teams) {
+        team.score = gameNight.participants
+          .filter(({ teamId }) => teamId === team.id)
+          .reduce((total, player) => total + player.score, 0);
+      }
+      return send({ removed: true });
+    }
+
+    if (method === 'POST' && segments[2] === 'challenges' && segments.length === 3) {
+      const { name, instructions } = request.postDataJSON() as {
+        name: string;
+        instructions: string;
+      };
+      const challenge = {
+        id: `challenge-${challenges.length + 1}`,
+        name,
+        instructions,
+        enabled: true,
+      };
+      challenges.push(challenge);
+      gameNight.availableChallengeCount = challenges.filter(({ enabled }) => enabled).length;
+      return send({ challenge }, 201);
+    }
+
+    if (method === 'POST' && segments[2] === 'challenges' && segments[3]) {
+      const challenge = challenges.find(({ id }) => id === segments[3]);
+      if (!challenge)
+        return send({ error: { code: 'NOT_FOUND', message: 'Challenge not found' } }, 404);
+      const { name, instructions, enabled } = request.postDataJSON() as {
+        name: string;
+        instructions: string;
+        enabled: boolean;
+      };
+      Object.assign(challenge, { name, instructions, enabled });
+      gameNight.availableChallengeCount = challenges.filter(({ enabled }) => enabled).length;
+      return send({ challenge });
     }
 
     if (method === 'POST' && segments[2] === 'start') {
@@ -239,22 +326,21 @@ export async function installMockBackend(page: Page) {
 
     if (method === 'POST' && segments[2] === 'challenge-draws') {
       const { participantId } = request.postDataJSON() as { participantId: string };
-      if (
-        gameNight.challengeRounds.some(
-          (round) => round.participantId === participantId && !round.finishedAt,
-        )
-      )
-        return send(
-          { error: { code: 'ROUND_ALREADY_ACTIVE', message: 'Finish the current round first' } },
-          409,
-        );
       const used = new Set(gameNight.challengeRounds.map(({ challenge }) => challenge.id));
-      const next = challenges.find(({ id }) => !used.has(id));
+      const next = challenges.find(({ id, enabled }) => enabled && !used.has(id));
       if (!next)
         return send(
           { error: { code: 'NO_UNUSED_CHALLENGES', message: 'No challenges left' } },
           409,
         );
+      for (const round of gameNight.challengeRounds) {
+        if (round.participantId === participantId && !round.finishedAt) {
+          round.finishedAt = new Date().toISOString();
+          round.timerStatus = 'stopped';
+          round.deadlineAt = null;
+          round.pausedRemainingSeconds = null;
+        }
+      }
       const challengeRound: MockRound = {
         id: `round-${gameNight.challengeRounds.length + 1}`,
         gameNightId: gameNight.id,

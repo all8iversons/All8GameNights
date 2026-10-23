@@ -8,6 +8,8 @@ New events have a unique six-digit numeric join code. Only its SHA-256 hash is s
 
 **Relationships**: Has many participants, teams, and challenge rounds. Additions and team/round changes are accepted in `setup` and `active`; completed nights are immutable.
 
+Snapshot challenge counts distinguish the number of enabled catalog entries from enabled entries not yet drawn in this game night, so disabling an already-used challenge does not falsely exhaust the remaining pool.
+
 ## Participant
 
 Existing player record, extended with an optional team assignment.
@@ -17,15 +19,18 @@ Existing player record, extended with an optional team assignment.
 | `id`            | UUID           | Primary identifier                                                        |
 | `game_night_id` | UUID           | Required event reference                                                  |
 | `team_id`       | UUID, nullable | Optional team belonging to the same event                                 |
-| `display_name`  | string         | Trimmed, 1-40 characters, unique within an event without case sensitivity |
+| `display_name`  | string         | Trimmed, 1-40 characters, unique among active participants within an event without case sensitivity |
 | `score`         | integer        | Authoritative individual score; starts at zero                            |
 | `created_at`    | timestamp      | Set on addition                                                           |
+| `removed_at`    | timestamp, nullable | Null while active; set on host removal, retaining historical records  |
 
 **State/validation**:
 
 - Additions are allowed before or during active play, but not after completion.
 - Team assignment must refer to a team in the same game night.
 - An unassigned player remains in individual standings and contributes to no team total.
+- A removed player is excluded from the active roster, standings, and future mutations. Removal stops and finishes unfinished rounds, clears team assignment, and preserves score and round history.
+- A removed player's display name may be reused by a newly added active participant; the new participant receives a distinct ID.
 
 ## Team
 
@@ -66,6 +71,7 @@ Existing round record, extended with an assigned player and explicit completion 
 - A challenge can be drawn once per game night.
 - A player can have at most one round with no `finished_at` in a game night.
 - Round finish is separate from timer reset. Finish stops any active timer and releases the player for a later challenge.
+- A host may issue a replacement challenge after confirming. The draw operation atomically finishes the player's current round, stops and clears its timer, retains it as history, and assigns a different unused challenge. If no unused challenge remains, the operation changes nothing.
 - Timer operations apply only to the specified round; the database deadline remains authoritative.
 - Challenge assignment and finish are rejected after game completion.
 - Teammates may swap their unfinished challenge assignments in an active game. The round records and timer state stay attached to the challenge; trades are rejected while either timer is running and idempotent retries cannot swap twice.
@@ -77,6 +83,17 @@ No player account is added. The spectator code authorizes casual score-submissio
 **Validation**: Require a valid spectator code, active game night, existing participant in that night, non-zero integer delta, valid idempotency key, and request rate limits. Anyone with the spectator code can submit for any participant; the user-facing experience must disclose this.
 
 Challenge trades use the same shared room-code access model and disclose that the room code does not verify the requester’s identity. Public score and trade mutations share the per-IP, per-game-night rate limit. The database requires both participants to be on the same non-null team and to have unfinished rounds.
+
+## Shared challenge catalog
+
+Challenges are shared across all game nights. Hosts can list, add, edit, enable, or disable catalog entries through host-authorized operations. Editing a catalog entry changes the displayed name and instructions on existing assignments because challenge rounds retain a reference to the catalog row. Disabling a challenge prevents future draws but does not delete it, change its historical consumption, or remove existing assignments.
+
+| Field          | Type    | Rules                                      |
+| -------------- | ------- | ------------------------------------------ |
+| `id`           | UUID    | Primary identifier                         |
+| `name`         | string  | Trimmed, 1-100 characters, globally unique |
+| `instructions` | string  | Trimmed, 1-1,000 characters                |
+| `enabled`      | boolean | Controls eligibility for future draws      |
 
 ## Team totals
 

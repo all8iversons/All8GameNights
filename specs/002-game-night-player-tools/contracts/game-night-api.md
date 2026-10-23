@@ -22,6 +22,22 @@ Response `201`: `{ "participant": { "id": "uuid", "displayName": "Player name", 
 
 Reject completed nights and invalid/duplicate names.
 
+## Remove a participant
+
+`POST /functions/v1/game-nights/{spectatorCode}/participants/{participantId}/remove`
+
+Host authorization required. Request body is `{}`. On success, return `200`: `{ "removed": true }`. Removal is allowed during setup and active play, and rejected after completion. The operation soft-removes the participant, clears their team assignment, finishes and stops any unfinished challenge timer, and preserves score and challenge-round history. Removed participants are omitted from active-roster results and cannot receive further score or challenge mutations. A later player may reuse the removed participant's display name.
+
+## Manage the shared challenge catalog
+
+All catalog operations require host authorization. Challenges are shared across all game nights.
+
+- `GET /functions/v1/game-nights/{spectatorCode}/challenges` returns `{ "challenges": [{ "id": "uuid", "name": "...", "instructions": "...", "enabled": true }] }`.
+- `POST /functions/v1/game-nights/{spectatorCode}/challenges` adds a challenge. Request: `{ "name": "Challenge name", "instructions": "Challenge instructions" }`. Response `201`: `{ "challenge": { "id": "uuid", "name": "...", "instructions": "...", "enabled": true } }`.
+- `POST /functions/v1/game-nights/{spectatorCode}/challenges/{challengeId}` updates a challenge. Request: `{ "name": "Challenge name", "instructions": "Challenge instructions", "enabled": true }`. Response `200` returns the updated challenge.
+
+Challenge names must be trimmed and contain 1-100 characters; instructions must be trimmed and contain 1-1,000 characters. Editing applies immediately to existing assignments. Disabling excludes a challenge from future draws but retains its catalog record and existing history. Invalid fields or a missing challenge return a stable error response.
+
 ## Submit a score change
 
 `POST /functions/v1/game-nights/{spectatorCode}/participants/{participantId}/score`
@@ -55,7 +71,7 @@ Host authorization required. Request:
 { "participantId": "uuid", "idempotencyKey": "unique-request-id" }
 ```
 
-Response `201` contains the unique challenge round with assigned player ID, challenge details, timer status, and round completion state. Return `409` if the player already has an unfinished round or all enabled challenges have been drawn. Serialize selection and insertion transactionally so the same challenge cannot be assigned twice.
+Response `201` contains the unique challenge round with assigned player ID, challenge details, timer status, and round completion state. If the player has an unfinished round, the host interface must ask for confirmation before submitting the draw. The operation atomically finishes the old round, stops and clears its timer, preserves it in history, then assigns a different unused challenge. If no enabled unused challenge remains, return `409` without changing the existing round. Serialize selection and insertion transactionally so the same challenge cannot be assigned twice.
 
 ## Control a player challenge timer or finish its round
 
@@ -83,10 +99,10 @@ Response `200`: `{ "traded": true }`. The players must belong to the same non-nu
 
 `GET /functions/v1/game-nights/{spectatorCode}`
 
-Response includes participants with team assignments, teams with derived totals, and challenge rounds with assigned participant IDs, completion status, and timer data. Keep existing fields for compatibility.
+Response includes active participants with team assignments, teams with derived totals, and challenge rounds with assigned participant IDs, completion status, and timer data. `availableChallengeCount` is the number of enabled catalog entries; `unusedChallengeCount` is the number of enabled entries not yet drawn in this game night. Removed participants are omitted from the active roster; historical rounds remain available. Keep existing fields for compatibility.
 
 ## Realtime and errors
 
 Committed participant, team, score, and challenge-round changes publish the existing payload-free `state_changed` notification. Clients fetch a new snapshot as the authoritative state.
 
-Errors preserve `{ "error": { "code": "VALIDATION_ERROR", "message": "..." } }`. Expected codes include `UNAUTHORIZED`, `NOT_FOUND`, `DUPLICATE_PARTICIPANT`, `DUPLICATE_TEAM`, `NIGHT_COMPLETED`, `ROUND_ALREADY_ACTIVE`, `NO_UNUSED_CHALLENGES`, `INVALID_STATE_TRANSITION`, `NO_TEAMS`, `RATE_LIMITED`, `IDEMPOTENCY_KEY_REUSED`, `CHALLENGE_NOT_AVAILABLE`, `CHALLENGE_TIMER_RUNNING`, and `PLAYERS_NOT_TEAMMATES`.
+Errors preserve `{ "error": { "code": "VALIDATION_ERROR", "message": "..." } }`. Expected codes include `UNAUTHORIZED`, `NOT_FOUND`, `DUPLICATE_PARTICIPANT`, `DUPLICATE_TEAM`, `DUPLICATE_CHALLENGE`, `NIGHT_COMPLETED`, `NO_UNUSED_CHALLENGES`, `INVALID_STATE_TRANSITION`, `NO_TEAMS`, `RATE_LIMITED`, `IDEMPOTENCY_KEY_REUSED`, `CHALLENGE_NOT_AVAILABLE`, `CHALLENGE_TIMER_RUNNING`, and `PLAYERS_NOT_TEAMMATES`.

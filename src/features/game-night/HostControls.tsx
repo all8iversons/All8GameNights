@@ -49,6 +49,25 @@ export function HostControls({
     }
   }
 
+  async function removeParticipant(participantId: string, displayName: string) {
+    if (
+      !window.confirm(
+        `Remove ${displayName} from this game night? Their score and challenge history will be kept, and an active timer will be stopped.`,
+      )
+    ) {
+      return;
+    }
+    setBusy(true);
+    try {
+      await gameNightApi.removeParticipant(spectatorCode, hostCapability, participantId);
+      await onChanged();
+    } catch (error) {
+      onError(error instanceof Error ? error.message : 'Could not remove player.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <section
       className="panel stack host-controls-panel"
@@ -79,6 +98,29 @@ export function HostControls({
         {participants.length} player{participants.length === 1 ? '' : 's'} in this game night.
         {status === 'setup' ? ' At least one is needed to begin.' : ''}
       </p>
+      {participants.length > 0 && (
+        <ul className="player-management-list" aria-label="Manage players">
+          {participants.map((participant) => (
+            <li key={participant.id}>
+              <span>
+                {participant.displayName}
+                <span className="muted"> · {participant.score} points</span>
+              </span>
+              <button
+                className="button secondary small"
+                type="button"
+                disabled={busy}
+                aria-label={`Remove ${participant.displayName}`}
+                onClick={() =>
+                  void removeParticipant(participant.id, participant.displayName)
+                }
+              >
+                Remove
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
       {status === 'setup' && (
         <button
           className="button secondary"

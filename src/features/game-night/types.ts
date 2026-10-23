@@ -49,6 +49,7 @@ export interface GameNight {
   teams: Team[];
   challengeRounds: ChallengeRound[];
   availableChallengeCount: number;
+  unusedChallengeCount: number;
   challengeCatalogAvailable: boolean;
   winners?: Winner[];
 }

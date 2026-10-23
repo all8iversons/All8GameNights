@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react';
 import { ChallengePanel } from '../challenge/ChallengePanel';
+import { ChallengeCatalogControls } from './ChallengeCatalogControls';
 import { gameNightApi } from './game-night-api';
 import { HostControls } from './HostControls';
 import { Scoreboard } from './Scoreboard';
@@ -26,9 +27,7 @@ export function GameNightPage({
   const [busyAction, setBusyAction] = useState('');
   const [wideScreen, setWideScreen] = useState(false);
   const isHost = Boolean(hostCapability);
-  const exhausted = Boolean(
-    gameNight && gameNight.challengeRounds.length >= gameNight.availableChallengeCount,
-  );
+  const exhausted = Boolean(gameNight && gameNight.unusedChallengeCount === 0);
 
   const onScore = useCallback(
     async (participantId: string, delta: number) => {
@@ -203,6 +202,12 @@ export function GameNightPage({
             onChanged={refresh}
             onError={setError}
           />
+          <ChallengeCatalogControls
+            spectatorCode={spectatorCode}
+            hostCapability={hostCapability}
+            onChanged={refresh}
+            onError={setError}
+          />
         </div>
       )}
       {gameNight.status === 'setup' && !isHost && (
@@ -232,6 +237,12 @@ export function GameNightPage({
                 onChanged={refresh}
                 onError={setError}
               />
+              <ChallengeCatalogControls
+                spectatorCode={spectatorCode}
+                hostCapability={hostCapability}
+                onChanged={refresh}
+                onError={setError}
+              />
             </>
           )}
           <Scoreboard
@@ -247,7 +258,6 @@ export function GameNightPage({
                 (round) => round.participantId === participant.id,
               );
               const currentRound = rounds.at(-1) ?? null;
-              const hasUnfinishedRound = rounds.some((round) => !round.finishedAt);
               const tradeCandidates = gameNight.participants.flatMap((teammate) => {
                 if (
                   participant.teamId === null ||
@@ -272,7 +282,34 @@ export function GameNightPage({
                 (tradeCandidates.length > 0 &&
                   tradeCandidates.every(({ round }) => round.timerStatus === 'running'));
               return (
-                <div className="player-round" key={participant.id}>
+                <div
+                  className={wideScreen ? 'player-round wide-player-row' : 'player-round'}
+                  key={participant.id}
+                >
+                  {wideScreen && (
+                    <aside
+                      className="wide-scoreline"
+                      aria-label={`Score for ${participant.displayName}`}
+                    >
+                      <strong className="wide-player-score" aria-label={`${participant.score} points`}>
+                        {participant.score}
+                      </strong>
+                      <span className="wide-score-controls">
+                        <button
+                          aria-label={`Subtract 100 points from ${participant.displayName}`}
+                          onClick={() => void onScore(participant.id, -100)}
+                        >
+                          −
+                        </button>
+                        <button
+                          aria-label={`Add 100 points to ${participant.displayName}`}
+                          onClick={() => void onScore(participant.id, 100)}
+                        >
+                          +
+                        </button>
+                      </span>
+                    </aside>
+                  )}
                   <ChallengePanel
                     playerName={participant.displayName}
                     teamName={
@@ -280,7 +317,7 @@ export function GameNightPage({
                     }
                     currentRound={currentRound}
                     canControl={isHost}
-                    canDraw={!hasUnfinishedRound}
+                    canDraw={isHost}
                     exhausted={exhausted}
                     catalogEmpty={gameNight.availableChallengeCount === 0}
                     catalogAvailable={gameNight.challengeCatalogAvailable}

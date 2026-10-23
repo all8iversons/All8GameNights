@@ -95,10 +95,27 @@ export function ChallengePanel({
       {canControl && canDraw && (
         <button
           className="button"
-          onClick={onDraw}
+          onClick={() => {
+            if (
+              currentRound &&
+              !currentRound.finishedAt &&
+              !window.confirm(
+                `Issue a new challenge to ${playerName}? Their current challenge will be finished, any running timer will stop, and the round will remain in history.`,
+              )
+            ) {
+              return;
+            }
+            onDraw();
+          }}
           disabled={busy || exhausted || !catalogAvailable}
         >
-          {busy ? 'Drawing…' : currentRound ? 'Draw next challenge' : 'Draw a challenge'}
+          {busy
+            ? 'Drawing…'
+            : currentRound && !currentRound.finishedAt
+              ? 'Issue new challenge'
+              : currentRound
+                ? 'Draw next challenge'
+                : 'Draw a challenge'}
         </button>
       )}
       {currentRound && !currentRound.finishedAt && tradeOptions.length > 0 && (

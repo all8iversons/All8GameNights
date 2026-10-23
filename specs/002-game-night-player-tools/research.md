@@ -44,6 +44,24 @@
 
 **Alternatives considered**: Appending generated teams to manually created teams was rejected because the host explicitly chose replacement semantics. Repeated client-side mutations were rejected because they could leave partial assignments.
 
+### Decision: Soft-remove participants and preserve history
+
+**Rationale**: Hosts can remove departed players from the live board without erasing scores, challenge rounds, or already-consumed challenges. A soft-removal timestamp lets snapshots and mutations distinguish historical participants from the current roster, and removal atomically finishes and stops any unfinished timer.
+
+**Alternatives considered**: Hard deletion was rejected because it would destroy game history and could make consumed challenges available again.
+
+### Decision: Manage one shared challenge catalog
+
+**Rationale**: Catalog entries are shared across events. Host-authorized list, create, edit, and enable/disable operations let hosts maintain that common pool; edits immediately change details shown by existing assignments, while disabling only affects future draws.
+
+**Alternatives considered**: Per-game-night catalogs and deleting assigned challenges were rejected to retain the existing shared catalog and challenge-history semantics.
+
+### Decision: Use a dense multi-column host board
+
+**Rationale**: Score lines beside compact player cards reduce vertical height while responsive columns allow a host to monitor up to 20 players on a wide display. The existing regular board remains available outside wide-screen mode.
+
+**Alternatives considered**: Increasing card density without aligning scores or splitting into columns was rejected because it does not solve the 20-player monitoring requirement.
+
 ### Decision: Give each player at most one unfinished round
 
 **Rationale**: This is the selected behavior. A player may receive another unused challenge after their current round is explicitly finished; each player's timer remains independent from other players.
