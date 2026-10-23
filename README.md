@@ -30,7 +30,7 @@ See the [Unraid deployment guide](deploy/unraid/README.md) for running the app a
 
 For a deployed environment, configure `ALLOWED_ORIGIN` on the Edge Functions with the exact website origin. Configure Supabase's project URL and publishable key in the frontend environment. Keep the server-side Supabase secret/service-role key in Supabase function secrets only; never use a `VITE_` prefix for a privileged key.
 
-The host capability is separate from the spectator code and is held only in the host tab's in-memory session. Keep the host tab open during the event. Completed game results are retained in the database; completed results are not editable in this initial version.
+The host recovery key is separate from the spectator code. The app keeps host access in the current browser tab session, so a reload can restore it; use the private recovery key shown on the board to reconnect from another device. Anyone with both the room code and recovery key can control the host settings, so keep the key private. Completed game results are retained in the database; completed results are not editable in this initial version.
 
 ## Validation
 

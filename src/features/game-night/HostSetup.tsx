@@ -1,19 +1,28 @@
 import { useState } from 'react';
 import { apiRequest } from '../../lib/api-client';
+import { gameNightApi } from './game-night-api';
 import type { CreatedGameNightResponse } from '../../lib/api-types';
 
 interface HostSetupProps {
   onCreated: (spectatorCode: string, hostCapability: string) => void;
   onJoin: (spectatorCode: string) => void;
+  onReconnect: (spectatorCode: string, hostCapability: string) => void;
+  initialError?: string;
 }
 
-export function HostSetup({ onCreated, onJoin }: HostSetupProps) {
+export function HostSetup({ onCreated, onJoin, onReconnect, initialError = '' }: HostSetupProps) {
   const [spectatorCode, setSpectatorCode] = useState('');
-  const [error, setError] = useState('');
+  const [hostCode, setHostCode] = useState('');
+  const [hostRecoveryKey, setHostRecoveryKey] = useState('');
+  const [error, setError] = useState(initialError);
   const [busy, setBusy] = useState(false);
   const normalizedJoinCode = spectatorCode.trim();
   const validJoinCode =
     /^\d{6}$/.test(normalizedJoinCode) || /^[a-f0-9]{64}$/i.test(normalizedJoinCode);
+  const normalizedHostCode = hostCode.trim();
+  const normalizedRecoveryKey = hostRecoveryKey.trim();
+  const validHostSession =
+    /^\d{6}$/.test(normalizedHostCode) && /^[a-f0-9]{64}$/i.test(normalizedRecoveryKey);
 
   async function createGameNight() {
     setBusy(true);
@@ -26,6 +35,21 @@ export function HostSetup({ onCreated, onJoin }: HostSetupProps) {
       onCreated(result.spectatorCode, result.hostCapability);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Could not create a game night.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function reconnectHost(event: React.FormEvent) {
+    event.preventDefault();
+    if (!validHostSession) return;
+    setBusy(true);
+    setError('');
+    try {
+      await gameNightApi.reconnectHost(normalizedHostCode, normalizedRecoveryKey);
+      onReconnect(normalizedHostCode, normalizedRecoveryKey);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Could not reconnect as host.');
     } finally {
       setBusy(false);
     }
@@ -77,6 +101,48 @@ export function HostSetup({ onCreated, onJoin }: HostSetupProps) {
             />
             <button className="button secondary" type="submit" disabled={!validJoinCode}>
               Join
+            </button>
+          </form>
+        </section>
+        <section className="panel stack" aria-labelledby="host-reconnect-heading">
+          <div>
+            <div className="eyebrow">Already hosting?</div>
+            <h2 id="host-reconnect-heading">Reconnect as host</h2>
+            <p className="muted">
+              Enter the room code and your private host recovery key. The spectator code alone
+              cannot restore host access.
+            </p>
+          </div>
+          <form className="stack" onSubmit={(event) => void reconnectHost(event)}>
+            <label className="sr-only" htmlFor="host-room-code">
+              Host room code
+            </label>
+            <input
+              id="host-room-code"
+              className="field"
+              value={hostCode}
+              inputMode="numeric"
+              maxLength={6}
+              onChange={(event) => setHostCode(event.target.value.replace(/\s/g, ''))}
+              placeholder="6-digit room code"
+              autoComplete="off"
+            />
+            <label className="sr-only" htmlFor="host-recovery-key">
+              Host recovery key
+            </label>
+            <input
+              id="host-recovery-key"
+              className="field"
+              type="password"
+              value={hostRecoveryKey}
+              maxLength={64}
+              onChange={(event) => setHostRecoveryKey(event.target.value.trim())}
+              placeholder="Private host recovery key"
+              autoComplete="off"
+              spellCheck={false}
+            />
+            <button className="button secondary" type="submit" disabled={busy || !validHostSession}>
+              {busy ? 'Verifying…' : 'Reconnect as host'}
             </button>
           </form>
         </section>

@@ -5,6 +5,27 @@ import { integrationEnvironment } from './setup';
 describe.skipIf(!integrationEnvironment.url || !integrationEnvironment.publishableKey)(
   'game-night functions',
   () => {
+    it('allows only the host recovery key to restore host access', async () => {
+      const { hostCapability, spectatorCode } = await createActiveGame();
+      const path = `game-nights/${spectatorCode}/host-session`;
+
+      const recovered = await invoke<{ authorized: true }>(path, {
+        method: 'POST',
+        hostCapability,
+        body: {},
+      });
+      expect(recovered.status).toBe(200);
+      expect(recovered.body.authorized).toBe(true);
+
+      const rejected = await invoke<{ error: { code: string } }>(path, {
+        method: 'POST',
+        hostCapability: '0'.repeat(64),
+        body: {},
+      });
+      expect(rejected.status).toBe(401);
+      expect(rejected.body.error.code).toBe('UNAUTHORIZED');
+    });
+
     it('updates scores idempotently and exposes the same authoritative snapshot to spectators', async () => {
       const { hostCapability, spectatorCode } = await createActiveGame();
       expect(spectatorCode).toMatch(/^\d{6}$/);

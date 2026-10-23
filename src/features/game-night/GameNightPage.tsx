@@ -12,10 +12,16 @@ import { deriveWinners } from '../history/leaderboard-utils';
 interface GameNightPageProps {
   spectatorCode: string;
   hostCapability: string | null;
+  sessionWarning?: string;
   onLeave: () => void;
 }
 
-export function GameNightPage({ spectatorCode, hostCapability, onLeave }: GameNightPageProps) {
+export function GameNightPage({
+  spectatorCode,
+  hostCapability,
+  sessionWarning = '',
+  onLeave,
+}: GameNightPageProps) {
   const { gameNight, error, loading, refresh, setError, realtimeConnected } =
     useLiveGameNight(spectatorCode);
   const [busyAction, setBusyAction] = useState('');
@@ -124,15 +130,32 @@ export function GameNightPage({ spectatorCode, hostCapability, onLeave }: GameNi
             <p className="muted">Share this 6-digit join code with your players and viewers:</p>
             <code className="share-code">{spectatorCode}</code>
             <p className="muted">
-              Host controls stay in this tab. Anyone with the shared code can submit score changes
-              under any player&apos;s name.
+              Host controls stay private. Anyone with the shared code can submit score changes under
+              any player&apos;s name.
             </p>
+            {hostCapability && (
+              <details>
+                <summary>Show host recovery key</summary>
+                <p className="muted">
+                  Keep this key private. Along with the room code, it restores host privileges on
+                  another device.
+                </p>
+                <code className="host-recovery-key" aria-label="Host recovery key">
+                  {hostCapability}
+                </code>
+              </details>
+            )}
           </div>
         </section>
       )}
       {error && (
         <p className="alert" role="alert" style={{ maxWidth: 1000, margin: '0 auto 16px' }}>
           {error}
+        </p>
+      )}
+      {sessionWarning && (
+        <p className="alert" role="status" style={{ maxWidth: 1000, margin: '0 auto 16px' }}>
+          {sessionWarning}
         </p>
       )}
       {gameNight.status === 'setup' && isHost && hostCapability && (

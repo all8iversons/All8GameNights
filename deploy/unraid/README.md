@@ -43,6 +43,7 @@ Supabase self-hosting is community-supported. The operator is responsible for se
 3. Start the project and wait for the Supabase API gateway and web service to report healthy.
 4. Open `http://<UNRAID-LAN-IP>:<APP_HTTP_PORT>` from another device on the LAN.
 5. Start a game night, add at least two players, update a score, and open the spectator view on another device. Confirm live updates work. Complete a game night and confirm the leaderboard records the result.
+6. The host session is restored after a reload in the same browser tab. To reconnect from another device, use the room code and the private host recovery key revealed on the host board; do not share that key with spectators.
 
 This baseline is LAN-only and does not require public internet access. If you later add a reverse proxy, configure HTTPS, the exact application origin, and WebSocket forwarding for Supabase Realtime. Do not expose Studio or internal service ports.
 
@@ -58,6 +59,7 @@ The stack does not attach to the existing MariaDB/MySQL service, use its credent
 - If the project will not start, inspect the health and logs of the API gateway and its dependencies. Correct missing or invalid settings without copying secrets into support logs.
 - If another Unraid service already owns a required host port, choose an unused `APP_HTTP_PORT` or `API_GW_HTTP_PORT`, update the matching URL/origin in `.env`, and restart the stack.
 - If the frontend loads but game-night requests fail, verify `SUPABASE_PUBLIC_URL`, `ANON_KEY`, and `ALLOWED_ORIGIN` agree with the LAN address and ports.
+- If the host reconnects from another device, verify they have both the room code and private host recovery key. The room code alone only joins the spectator board.
 - If Realtime is not connected through a later-added proxy, verify that the proxy forwards WebSocket upgrade requests.
 - Preserve the pinned upstream revision during updates. Review upstream changes and take a verified backup before changing the Supabase version.
 

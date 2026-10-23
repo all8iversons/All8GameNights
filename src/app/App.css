@@ -293,6 +293,11 @@ h2 {
   border-radius: 8px;
   font-family: monospace;
 }
+.host-recovery-key {
+  display: block;
+  overflow-wrap: anywhere;
+  user-select: all;
+}
 .history-list {
   display: grid;
   gap: 14px;

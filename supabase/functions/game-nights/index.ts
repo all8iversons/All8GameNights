@@ -91,6 +91,11 @@ async function handle(request: Request): Promise<Response> {
     throw new HttpError(405, 'METHOD_NOT_ALLOWED', 'This method is not supported.');
   }
 
+  if (resource === 'host-session') {
+    await requireHost(request, spectatorCode, true);
+    return jsonResponse({ authorized: true });
+  }
+
   if (resource === 'participants' && !id) return addParticipant(request, spectatorCode);
   if (resource === 'start') return startGameNight(request, spectatorCode);
   if (resource === 'teams' && !id) return createTeam(request, spectatorCode);

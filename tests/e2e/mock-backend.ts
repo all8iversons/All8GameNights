@@ -48,6 +48,7 @@ export async function installMockBackend(page: Page) {
     createdAt: string;
   }
   const spectatorCode = '482731';
+  const hostCapability = 'a'.repeat(64);
 
   await page.route('http://127.0.0.1:54321/functions/v1/**', async (route: Route) => {
     const request = route.request();
@@ -89,7 +90,7 @@ export async function installMockBackend(page: Page) {
       return send(
         {
           gameNight: { id: gameNight.id, status: 'setup', createdAt: gameNight.createdAt },
-          hostCapability: 'private-host-capability',
+          hostCapability,
           spectatorCode,
         },
         201,
@@ -101,6 +102,16 @@ export async function installMockBackend(page: Page) {
     }
 
     if (method === 'GET' && segments.length === 2) return send({ gameNight });
+
+    if (method === 'POST' && segments[2] === 'host-session') {
+      if (request.headers().authorization !== `Bearer ${hostCapability}`) {
+        return send(
+          { error: { code: 'UNAUTHORIZED', message: 'Host authorization is invalid.' } },
+          401,
+        );
+      }
+      return send({ authorized: true });
+    }
 
     if (method === 'POST' && segments[2] === 'participants' && segments.length === 3) {
       const { displayName } = request.postDataJSON() as { displayName: string };

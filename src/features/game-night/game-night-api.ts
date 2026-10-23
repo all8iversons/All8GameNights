@@ -9,6 +9,13 @@ export const gameNightApi = {
   snapshot: (spectatorCode: string) =>
     apiRequest<{ gameNight: GameNight }>(`game-nights/${spectatorCode}`),
 
+  reconnectHost: (spectatorCode: string, hostCapability: string) =>
+    apiRequest<{ authorized: true }>(`game-nights/${spectatorCode}/host-session`, {
+      method: 'POST',
+      hostCapability,
+      body: {},
+    }),
+
   addParticipant: (spectatorCode: string, hostCapability: string, displayName: string) =>
     apiRequest<{ participant: Participant }>(`game-nights/${spectatorCode}/participants`, {
       method: 'POST',

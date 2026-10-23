@@ -67,6 +67,48 @@ test('joins a game night using a six-digit code', async ({ page }) => {
   await expect(page.getByRole('heading', { name: /game night is on/i })).toBeVisible();
 });
 
+test('host privileges reconnect after a reload using the saved session', async ({ page }) => {
+  await installMockBackend(page);
+  await page.goto('/');
+  await page.getByRole('button', { name: /create game night/i }).click();
+  await expect(page.getByRole('heading', { name: /add your players/i })).toBeVisible();
+
+  await page.reload();
+
+  await expect(page.getByRole('heading', { name: /add your players/i })).toBeVisible();
+  await expect(page.getByText('482731', { exact: true })).toBeVisible();
+  await expect(page.getByText('Host view')).toBeVisible();
+});
+
+test('host can reconnect with the private recovery key', async ({ page }) => {
+  await installMockBackend(page);
+  await page.goto('/');
+  await page.getByRole('button', { name: /create game night/i }).click();
+  await page.getByText('Show host recovery key').click();
+  await expect(page.getByText('a'.repeat(64), { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: /leave board/i }).click();
+
+  await page.getByLabel('Host room code').fill('482731');
+  await page.getByLabel('Host recovery key').fill('a'.repeat(64));
+  await page.getByRole('button', { name: /reconnect as host/i }).click();
+
+  await expect(page.getByText('Host view')).toBeVisible();
+  await expect(page.getByRole('heading', { name: /add your players/i })).toBeVisible();
+});
+
+test('spectator code alone cannot restore host privileges', async ({ page }) => {
+  await installMockBackend(page);
+  await page.goto('/');
+  await page.getByRole('button', { name: /create game night/i }).click();
+  await page.getByRole('button', { name: /leave board/i }).click();
+  await page.getByLabel('Host room code').fill('482731');
+  await page.getByLabel('Host recovery key').fill('0'.repeat(64));
+  await page.getByRole('button', { name: /reconnect as host/i }).click();
+
+  await expect(page.getByRole('alert')).toContainText(/host authorization is invalid/i);
+  await expect(page.getByRole('button', { name: /create game night/i })).toBeVisible();
+});
+
 test('host generates teams by team count or players per team', async ({ page }) => {
   await installMockBackend(page);
   await page.goto('/');
