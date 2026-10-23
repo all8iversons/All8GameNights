@@ -1,0 +1,86 @@
+# Data Model: Game Night Player Tools
+
+## GameNight
+
+Existing event record. Status remains `setup`, `active`, or `completed`.
+
+New events have a unique six-digit numeric join code. Only its SHA-256 hash is stored in `share_code_hash`. Existing events retain their previously issued long code for compatibility. Since join codes are short and also authorize casual score submissions, invalid lookups and public score mutations are rate-limited; the separate host capability remains high-entropy.
+
+**Relationships**: Has many participants, teams, and challenge rounds. Additions and team/round changes are accepted in `setup` and `active`; completed nights are immutable.
+
+## Participant
+
+Existing player record, extended with an optional team assignment.
+
+| Field           | Type           | Rules                                                                     |
+| --------------- | -------------- | ------------------------------------------------------------------------- |
+| `id`            | UUID           | Primary identifier                                                        |
+| `game_night_id` | UUID           | Required event reference                                                  |
+| `team_id`       | UUID, nullable | Optional team belonging to the same event                                 |
+| `display_name`  | string         | Trimmed, 1-40 characters, unique within an event without case sensitivity |
+| `score`         | integer        | Authoritative individual score; starts at zero                            |
+| `created_at`    | timestamp      | Set on addition                                                           |
+
+**State/validation**:
+
+- Additions are allowed before or during active play, but not after completion.
+- Team assignment must refer to a team in the same game night.
+- An unassigned player remains in individual standings and contributes to no team total.
+
+## Team
+
+Named group within one game night.
+
+| Field           | Type      | Rules                                                                                |
+| --------------- | --------- | ------------------------------------------------------------------------------------ |
+| `id`            | UUID      | Primary identifier                                                                   |
+| `game_night_id` | UUID      | Required event reference                                                             |
+| `name`          | string    | Trimmed, non-empty, length-bounded, unique within the event without case sensitivity |
+| `created_at`    | timestamp | Set on creation                                                                      |
+
+**Relationships**: Has zero or more assigned participants. Its displayed score is derived as the sum of member participant scores. Removing a team clears its members' assignments but does not remove players or scores.
+
+Hosts can randomize all current participants across existing teams, assigning team sizes that differ by at most one. They can also generate a replacement team set by choosing a team count or players-per-team capacity. Generated teams use unique original space-themed names, are assigned randomly and evenly in one transaction, and preserve individual player scores. A capacity-based setup may produce a smaller final team.
+
+Hosts can randomize all current participants across existing teams. The server randomizes player and team order in one transaction and assigns team sizes that differ by no more than one; players are not left unassigned by this operation.
+
+## ChallengeRound
+
+Existing round record, extended with an assigned player and explicit completion state.
+
+| Field                      | Type                           | Rules                                                 |
+| -------------------------- | ------------------------------ | ----------------------------------------------------- |
+| `id`                       | UUID                           | Primary identifier                                    |
+| `game_night_id`            | UUID                           | Required event reference                              |
+| `participant_id`           | UUID                           | Required player reference in the same game night      |
+| `challenge_id`             | UUID                           | Required catalog reference                            |
+| `selected_at`              | timestamp                      | Set on draw                                           |
+| `finished_at`              | timestamp, nullable            | Set when host finishes the round                      |
+| `timer_status`             | enum                           | `ready`, `running`, `paused`, `expired`, or `stopped` |
+| `duration_seconds`         | positive integer, nullable     | Timer duration                                        |
+| `deadline_at`              | timestamp, nullable            | Authoritative running deadline                        |
+| `paused_remaining_seconds` | non-negative integer, nullable | Remaining time while paused                           |
+
+**State/validation**:
+
+- A challenge can be drawn once per game night.
+- A player can have at most one round with no `finished_at` in a game night.
+- Round finish is separate from timer reset. Finish stops any active timer and releases the player for a later challenge.
+- Timer operations apply only to the specified round; the database deadline remains authoritative.
+- Challenge assignment and finish are rejected after game completion.
+
+## Score submission
+
+No player account is added. The spectator code authorizes casual score-submission requests; the selected participant ID/name identifies whose score changes, not the submitter.
+
+**Validation**: Require a valid spectator code, active game night, existing participant in that night, non-zero integer delta, valid idempotency key, and request rate limits. Anyone with the spectator code can submit for any participant; the user-facing experience must disclose this.
+
+## Team totals
+
+Team totals are derived from current participant scores, not persisted separately. Reassignment moves the player's current score from the old team's total to the new team's total.
+
+## Compatibility
+
+- Preserve existing game-night status and individual score history.
+- Existing rounds from earlier migrations are associated with a player by a deterministic data migration where possible; if an active legacy round cannot be assigned, it remains visible to the host and must be resolved before another draw is made.
+- Completed game-night history remains based on individual participant scores.

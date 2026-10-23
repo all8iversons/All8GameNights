@@ -1,0 +1,169 @@
+# Feature Specification: Game Night Player Tools
+
+**Feature Branch**: `002-game-night-player-tools`
+
+**Created**: 2026-10-22
+
+**Status**: Draft
+
+**Input**: User description: "I would like to add the ability to add players after the game night has begun, I would like to be able to draw challenges per player, and to have a timer per player I would like to be able to place players into teams I would like players to be able to update their own scores"
+
+## User Scenarios & Testing _(mandatory)_
+
+### User Story 1 - Add players during a game (Priority: P1)
+
+As a host, I want to add a player after a game night has started, so late arrivals can join without restarting the event.
+
+**Why this priority**: A game night should accommodate players who arrive after play begins.
+
+**Independent Test**: Start a game with at least one player, add another player, and verify the new player appears in the live standings with an initial score.
+
+**Acceptance Scenarios**:
+
+1. **Given** an active game night, **When** the host adds a valid player name, **Then** the player appears in the live board with a score of zero.
+2. **Given** an active game night, **When** the host adds a blank or duplicate player name, **Then** the player is not added and the host sees a clear explanation.
+3. **Given** a completed game night, **When** the host attempts to add a player, **Then** the game remains unchanged and the action is rejected.
+
+### User Story 2 - Run individual challenges and timers (Priority: P1)
+
+As a host, I want to draw a challenge for a specific player and manage that player's timer, so multiple players can work on their own challenge rounds.
+
+**Why this priority**: Assigning challenges and timing separately for each player makes the game-night activities work for individuals and parallel play.
+
+**Independent Test**: Start an active game with two players, draw a challenge for each, start and control each timer independently, and verify each player's challenge and remaining time are shown correctly.
+
+**Acceptance Scenarios**:
+
+1. **Given** an active game with unused challenges, **When** the host draws for a player, **Then** one unused challenge is assigned to that player and shown with its instructions.
+2. **Given** two players with separate challenge rounds, **When** the host starts, pauses, resumes, or resets one player's timer, **Then** the other player's challenge and timer are unchanged.
+3. **Given** a player with an unfinished challenge, **When** the host tries to draw a second challenge for that player, **Then** the draw is rejected until the current round is explicitly finished; resetting its timer alone does not finish the round.
+4. **Given** all challenges have already been drawn in the game night, **When** the host requests another draw, **Then** the experience explains that no unused challenges remain.
+5. **Given** a challenge timer reaches zero, **When** its duration expires, **Then** that player's round visibly signals that time is up without changing other players' timers.
+
+### User Story 3 - Organize players into teams (Priority: P2)
+
+As a host, I want to assign players to teams, so the live board shows both each player's score and how each team is doing.
+
+**Why this priority**: Team play adds a shared competitive view while preserving individual performance and existing score history.
+
+**Independent Test**: Create teams, assign players, update player scores, and verify each team total equals the sum of its members' scores.
+
+**Acceptance Scenarios**:
+
+1. **Given** an active game night, **When** the host creates teams and assigns players, **Then** the live board shows team membership and each team's summed score.
+2. **Given** a player is reassigned to another team, **When** the board updates, **Then** both team totals reflect the player's current score in the new assignment.
+3. **Given** a player is not assigned to a team, **When** team standings are shown, **Then** the player remains visible in individual standings and is not silently assigned to a team.
+4. **Given** two teams have equal totals, **When** team standings are shown, **Then** the teams are shown as tied.
+5. **Given** at least one team and one player, **When** the host randomizes teams, **Then** every player is randomly assigned across existing teams with team sizes differing by no more than one.
+6. **Given** team standings are visible, **When** participants are assigned to teams, **Then** each team shows the names of its current members.
+
+### User Story 4 - Let players submit their scores (Priority: P2)
+
+As a player, I want to submit a score change using the spectator code and my player name, so a host does not have to enter every score update.
+
+**Why this priority**: Player-submitted scoring reduces host workload and lets players keep play moving.
+
+**Independent Test**: Join an active game using its spectator code, choose a participant name, submit a valid score change, and verify the individual and team standings update for all viewers.
+
+**Acceptance Scenarios**:
+
+1. **Given** an active game night and a valid spectator code, **When** a player submits an allowed score change for a listed player, **Then** the score and affected team total update on the live board.
+2. **Given** an invalid player, invalid score change, or completed game night, **When** a score update is submitted, **Then** no score changes and the player receives a clear error.
+3. **Given** the game night uses shared-code/name scoring, **When** someone has the spectator code, **Then** the experience makes clear that the code does not verify a player's identity and submissions may be made under any listed player's name.
+
+### User Story 5 - Join with a short code (Priority: P1)
+
+As a host, I want to share a six-digit numeric code, so players can join the live board without copying a long token.
+
+**Independent Test**: Create a game night, verify its join code has six digits, join with that code, and verify repeated invalid code attempts are rate-limited.
+
+**Acceptance Scenarios**:
+
+1. **Given** a newly created game night, **When** the host shares its join code, **Then** it is exactly six numeric digits and opens the correct game night.
+2. **Given** an existing game night created with a legacy long code, **When** a viewer enters that code, **Then** the viewer can still join.
+3. **Given** an IP address repeatedly submits invalid join codes, **When** it exceeds the allowed attempts, **Then** additional attempts are rate-limited.
+4. **Given** a six-digit code is also used for casual score submissions, **When** someone has or guesses that code, **Then** the existing disclosure remains visible and score changes remain rate-limited.
+
+### User Story 6 - Generate teams with a chosen size (Priority: P2)
+
+As a host, I want to set either the number of teams or players per team and have balanced teams generated with random space-themed names, so I can quickly organize the roster.
+
+**Independent Test**: Generate teams for a roster using both sizing modes, verify the player counts and names, and confirm player scores are unchanged and previous teams are replaced.
+
+**Acceptance Scenarios**:
+
+1. **Given** a roster and no existing teams, **When** the host chooses a team count, **Then** that many uniquely named teams are created and all players are randomly assigned as evenly as possible.
+2. **Given** a roster and existing teams, **When** the host chooses players per team, **Then** enough newly named teams are created, each team has at most the requested number of players, and the last team may be smaller.
+3. **Given** existing teams and player scores, **When** the host generates teams, **Then** the existing teams and assignments are replaced atomically while individual player scores remain unchanged.
+4. **Given** an invalid count or empty roster, **When** the host requests team generation, **Then** no team or assignment changes are committed and a clear validation error is shown.
+
+### Edge Cases
+
+- Two hosts try to add players with the same name at nearly the same time; only one succeeds and the other receives a duplicate-name message.
+- A player is added after team assignments already exist; the new player is unassigned until the host assigns them.
+- A host tries to assign a challenge to a player who has an unfinished round; the existing round remains intact.
+- Two players request a challenge at the same time when only one unused challenge remains; it is assigned at most once and the other request receives the no-challenges-remaining response.
+- A team has no members; it remains visible with a total of zero or can be removed by the host.
+- A team or player name is blank, too long, or duplicated within the relevant game night; the change is rejected with clear guidance.
+- One player's timer expires while another player's timer is running or paused; only the expired timer changes state.
+- A player submits a score change while the host also changes that player's score; the final value reflects both accepted changes without losing either.
+- A client reconnects after a score, team, or round update; it reloads the authoritative current state.
+- A score submission uses the spectator code; as chosen for casual play, anyone with that code may submit under any player's name.
+
+## Requirements _(mandatory)_
+
+### Functional Requirements
+
+- **FR-001**: The host MUST be able to add a named player to a game night in setup or active status.
+- **FR-002**: The system MUST initialize each added player's score to zero and include the player in the live individual standings.
+- **FR-003**: The system MUST reject blank or duplicate player names and MUST provide an actionable message; player names MUST be trimmed and contain 1-40 characters.
+- **FR-004**: The host MUST be able to create, rename, and remove teams during setup or active play; team names MUST be trimmed and contain 1-40 characters and be unique without regard to case within the game night.
+- **FR-005**: The host MUST be able to assign each player to at most one team and change or remove that assignment during setup or active play.
+- **FR-006**: The live board MUST show individual scores and team totals equal to the sum of assigned members' scores; unassigned players MUST remain in individual standings.
+- **FR-007**: The host MUST be able to draw an unused challenge for a selected player during an active game night.
+- **FR-008**: At most one unfinished challenge round MAY be assigned to a player at a time; another draw for that player MUST be rejected until the current round is explicitly finished. Resetting a timer MUST NOT finish its round.
+- **FR-009**: A challenge MUST NOT be drawn more than once during a game night, regardless of which player it is assigned to.
+- **FR-010**: The host MUST be able to independently start, pause, resume, reset, and finish each player's challenge timer without changing another player's round or timer.
+- **FR-011**: The live board MUST show each assigned player's challenge, instructions, timer state, and time remaining, and MUST signal that player's timer expiration.
+- **FR-012**: A player MUST be able to submit a score change for a listed player by providing the game-night spectator code and selecting the player's name, while the game night is active.
+- **FR-013**: Score submission MUST validate the game-night status, player membership, and a non-zero whole-number score delta between -10,000 and 10,000 inclusive and MUST return a clear error for rejected submissions.
+- **FR-014**: The player-scoring interface MUST state that the spectator code is shared and does not verify the submitter's identity; anyone with the code can submit a change under any player's name.
+- **FR-015**: Accepted score changes MUST update the individual's standings and the corresponding team total for all connected viewers within one second.
+- **FR-016**: The system MUST preserve players, team assignments, scores, challenge assignments, and timer state across reconnections and reloads.
+- **FR-017**: Completed game nights MUST reject player additions, team changes, challenge changes, timer changes, and score submissions.
+- **FR-018**: Failures to save or synchronize player, team, challenge, timer, or score changes MUST be visible to the user and MUST NOT be presented as successful.
+- **FR-019**: The host MUST be able to randomly distribute all players across the existing teams in a single operation; resulting team sizes MUST differ by no more than one, and the operation MUST be atomic.
+- **FR-020**: Newly created game nights MUST receive a unique six-digit numeric join code; previously issued long codes MUST remain usable.
+- **FR-021**: Invalid join-code attempts MUST be rate-limited by source IP, and public score submissions MUST remain rate-limited.
+- **FR-022**: Team standings MUST display the names of all players assigned to each team and clearly indicate when a team has no assigned players.
+- **FR-023**: The host MUST be able to generate teams by specifying either the number of teams or players per team; players MUST be distributed randomly and evenly, generated teams MUST use unique original space-themed names, and existing teams MUST be replaced atomically without changing individual scores.
+
+### Key Entities
+
+- **Player**: A named game-night participant with an individual score and optional team assignment.
+- **Team**: A named group of players with a total derived from its assigned members' individual scores.
+- **Challenge round**: A unique challenge assigned to one player, including its completion state and timer controls.
+- **Player score submission**: A score change submitted using the shared spectator code and a selected player name; it is not an identity-verified action.
+- **Game night**: The event that owns its players, teams, scores, challenge rounds, and status.
+
+## Success Criteria _(mandatory)_
+
+### Measurable Outcomes
+
+- **SC-001**: A host can add a player to an active game and see that player appear in the standings within 10 seconds.
+- **SC-002**: A host can assign a challenge and independently start its timer for a selected player in under 30 seconds.
+- **SC-003**: When two players have active rounds, a timer action on one player leaves the other player's timer state unchanged in 100% of tested cases.
+- **SC-004**: Team totals match the sum of assigned player scores after every accepted score update in 100% of tested cases.
+- **SC-005**: 95% of accepted player score submissions appear in connected viewers' standings within one second.
+- **SC-006**: Invalid or unauthorized-state changes provide a visible error and do not alter saved game-night state in 100% of tested cases.
+- **SC-007**: A viewer can join with a six-digit code, and repeated invalid code attempts are throttled; randomizing players assigns the full roster with team sizes balanced to within one player.
+- **SC-008**: A host can generate the requested team count or player capacity in one action, see all players assigned to balanced teams, and retain every individual score.
+
+## Assumptions
+
+- The six-digit join code is the entry point for viewers and casual player score submissions; existing long codes remain valid for game nights created before this change.
+- Individual scores remain the source of truth; team totals are derived and do not replace or duplicate player scores.
+- A challenge is unique across the entire game night, even when assigned to different players.
+- Each player can have only one unfinished challenge at a time; different players may run independent rounds and timers concurrently.
+- Player-submitted scores use the casual-play trust model selected by the user: possession of the spectator code permits submission under any player's name. The interface must disclose this; it is not authentication.
+- Existing completed-game history continues to represent individual player results. Team history enhancements beyond recording current team totals are not included unless needed to preserve current behavior.
